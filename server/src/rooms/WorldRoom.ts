@@ -1,5 +1,6 @@
 import { Room, Client } from "colyseus";
 import { WorldState, Player } from "./schema/WorldState.js";
+import { prisma } from "../db.js";
 
 const TILE = 64;
 const COLS = 32;
@@ -42,6 +43,17 @@ export class WorldRoom extends Room {
     this.state.tiles.push(...tiles);
   }
 
+  private async saveAll() {
+    for (const [, player] of this.state.players) {
+      await prisma.character
+        .update({
+          where: { name: player.name },
+          data: { x: player.x, y: player.y },
+        })
+        .catch(() => {});
+    }
+  }
+
   onCreate() {
     this.generateMap();
 
@@ -63,6 +75,7 @@ export class WorldRoom extends Room {
 
     // fixed simulation tick — 30fps
     this.setSimulationInterval((dt) => this.update(dt), 1000 / 30);
+    this.clock.setInterval(() => this.saveAll(), 15000);
   }
 
   update(dtMs: number) {
@@ -89,12 +102,24 @@ export class WorldRoom extends Room {
     });
   }
 
-  onJoin(client: Client, options: { name?: string }) {
+  async onJoin(client: Client, options: { name?: string }) {
+    const name = (options?.name || "Anon").slice(0, 16);
+    const record = await prisma.character.upsert({
+      where: { name },
+      update: {},
+      create: {
+        name,
+        x: Math.random() * 400 + 100,
+        y: Math.random() * 400 + 100,
+        color: randomColor(),
+      },
+    });
+
     const player = new Player();
-    player.x = Math.random() * 400 + 100;
-    player.y = Math.random() * 400 + 100;
-    player.color = randomColor();
-    player.name = (options?.name || "Anon").slice(0, 16);
+    player.x = record.x;
+    player.y = record.y;
+    player.color = record.color;
+    player.name = record.name;
     this.state.players.set(client.sessionId, player);
     this.inputs.set(client.sessionId, {
       up: false,
@@ -104,7 +129,16 @@ export class WorldRoom extends Room {
     });
   }
 
-  onLeave(client: Client) {
+  async onLeave(client: Client) {
+    const player = this.state.players.get(client.sessionId);
+    if (player) {
+      await prisma.character
+        .update({
+          where: { name: player.name },
+          data: { x: player.x, y: player.y },
+        })
+        .catch(() => {});
+    }
     this.state.players.delete(client.sessionId);
     this.inputs.delete(client.sessionId);
   }

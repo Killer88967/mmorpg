@@ -6,6 +6,7 @@ import {
   createRouter,
   createEndpoint,
 } from "colyseus";
+import { WebSocketTransport } from "@colyseus/ws-transport";
 
 /**
  * Import your Room files
@@ -13,6 +14,12 @@ import {
 import { WorldRoom } from "./rooms/WorldRoom.js";
 
 const server = defineServer({
+  /**
+   * Transport pinned explicitly so Colyseus doesn't fall back to its
+   * dynamic-require default loader (which tsx/ESM won't run).
+   */
+  transport: new WebSocketTransport(),
+
   /**
    * Define your room handlers:
    */

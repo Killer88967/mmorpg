@@ -21,5 +21,8 @@
   },
   "github.copilot.enable": {
     "*": false
+  },
+  "[prisma]": {
+    "editor.defaultFormatter": "Prisma.prisma"
   }
 }
