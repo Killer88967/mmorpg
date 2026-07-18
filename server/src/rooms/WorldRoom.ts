@@ -54,6 +54,13 @@ export class WorldRoom extends Room {
       });
     });
 
+    this.onMessage("chat", (client, text: string) => {
+      const player = this.state.players.get(client.sessionId);
+      const clean = String(text).slice(0, 200).trim();
+      if (!clean) return;
+      this.broadcast("chat", { name: player?.name || "Anon", text: clean });
+    });
+
     // fixed simulation tick — 30fps
     this.setSimulationInterval((dt) => this.update(dt), 1000 / 30);
   }
@@ -82,11 +89,12 @@ export class WorldRoom extends Room {
     });
   }
 
-  onJoin(client: Client) {
+  onJoin(client: Client, options: { name?: string }) {
     const player = new Player();
     player.x = Math.random() * 400 + 100;
     player.y = Math.random() * 400 + 100;
     player.color = randomColor();
+    player.name = (options?.name || "Anon").slice(0, 16);
     this.state.players.set(client.sessionId, player);
     this.inputs.set(client.sessionId, {
       up: false,

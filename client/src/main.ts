@@ -1,9 +1,8 @@
 //@ts-nocheck
 import { Client, Callbacks } from "@colyseus/sdk";
-import { Application, Graphics, Container } from "pixi.js";
+import { Application, Graphics, Container, Text } from "pixi.js";
 import type { WorldState } from "../../server/src/rooms/schema/WorldState";
 
-// const ENDPOINT = "https://solid-space-memory-xg5w7vqg7v72px4q-2567.app.github.dev";
 const ENDPOINT = location.hostname.endsWith(".app.github.dev")
   ? `${location.protocol}//${location.hostname.replace("-5173.", "-2567.")}`
   : "http://localhost:2567";
@@ -16,32 +15,26 @@ async function main() {
   const world = new Container();
   app.stage.addChild(world);
 
-  const COLORS: Record<number, number> = {
-    0: 0x2e7d32, // grass
-    1: 0x1565c0, // water
-    2: 0xb08968, // path
-    3: 0x1b3a1b, // tree
-  };
+  const COLORS = { 0: 0x2e7d32, 1: 0x1565c0, 2: 0xb08968, 3: 0x1b3a1b };
 
-  function buildMap(state: WorldState) {
+  function buildMap(state) {
     const g = new Graphics();
     const t = state.tile;
     for (let r = 0; r < state.rows; r++)
-      for (let c = 0; c < state.cols; c++) {
+      for (let c = 0; c < state.cols; c++)
         g.rect(c * t, r * t, t, t).fill(
           COLORS[state.tiles[r * state.cols + c]] ?? 0x000000,
         );
-      }
-    world.addChildAt(g, 0); // ground sits beneath player sprites
+    world.addChildAt(g, 0);
   }
 
-  const sprites = new Map<string, Graphics>();
+  const sprites = new Map();
 
+  const name = (prompt("Pick a name") || "Anon").slice(0, 16);
   const client = new Client(ENDPOINT);
-  const room = await client.joinOrCreate<WorldState>("world");
+  const room = await client.joinOrCreate<WorldState>("world", { name });
   const $ = Callbacks.get(room);
 
-  // build the map once the first full state arrives (guarded against empty initial sync)
   let mapBuilt = false;
   room.onStateChange(() => {
     if (mapBuilt || room.state.tiles.length === 0) return;
@@ -53,32 +46,79 @@ async function main() {
     const g = new Graphics().rect(-12, -12, 24, 24).fill(player.color);
     g.x = player.x;
     g.y = player.y;
+    g.tx = player.x; // interpolation targets
+    g.ty = player.y;
+
+    const label = new Text({
+      text: player.name,
+      style: { fill: 0xffffff, fontSize: 12, fontFamily: "monospace" },
+    });
+    label.anchor.set(0.5);
+    label.y = -22;
+    g.addChild(label);
+
     world.addChild(g);
     sprites.set(sessionId, g);
-    $.listen(player, "x", (v: number) => {
-      g.x = v;
-    });
-    $.listen(player, "y", (v: number) => {
-      g.y = v;
-    });
+
+    $.listen(player, "x", (v) => (g.tx = v));
+    $.listen(player, "y", (v) => (g.ty = v));
+    $.listen(player, "name", (v) => (label.text = v));
   });
 
-  $.onRemove("players", (_player: any, sessionId: string) => {
+  $.onRemove("players", (_player, sessionId) => {
     sprites.get(sessionId)?.destroy();
     sprites.delete(sessionId);
   });
 
-  // camera: keep our own player centered on screen
+  // render loop: smooth movement (interpolation) + camera follow
   app.ticker.add(() => {
+    sprites.forEach((g) => {
+      g.x += (g.tx - g.x) * 0.2;
+      g.y += (g.ty - g.y) * 0.2;
+    });
     const me = sprites.get(room.sessionId);
     if (!me) return;
     world.x = app.screen.width / 2 - me.x;
     world.y = app.screen.height / 2 - me.y;
   });
 
-  // input → server
+  // ---- chat UI (HTML overlay on top of the canvas) ----
+  const chatLog = document.createElement("div");
+  chatLog.style.cssText =
+    "position:fixed;left:8px;bottom:46px;width:320px;max-height:180px;overflow-y:auto;font:13px monospace;color:#eee;text-shadow:0 1px 2px #000;pointer-events:none;";
+  document.body.appendChild(chatLog);
+
+  const chatInput = document.createElement("input");
+  chatInput.placeholder = "Press Enter to chat…";
+  chatInput.style.cssText =
+    "position:fixed;left:8px;bottom:8px;width:320px;padding:6px 8px;font:13px monospace;background:#000a;color:#fff;border:1px solid #444;border-radius:4px;";
+  document.body.appendChild(chatInput);
+
+  chatInput.addEventListener("keydown", (e) => {
+    e.stopPropagation();
+    if (e.key === "Enter") {
+      const text = chatInput.value.trim();
+      if (text) room.send("chat", text);
+      chatInput.value = "";
+      chatInput.blur();
+    } else if (e.key === "Escape") {
+      chatInput.value = "";
+      chatInput.blur();
+    }
+  });
+
+  room.onMessage("chat", (msg) => {
+    const line = document.createElement("div");
+    line.textContent = `${msg.name}: ${msg.text}`;
+    chatLog.appendChild(line);
+    while (chatLog.childNodes.length > 8)
+      chatLog.removeChild(chatLog.firstChild);
+    chatLog.scrollTop = chatLog.scrollHeight;
+  });
+
+  // ---- input → server ----
   const held = { up: false, down: false, left: false, right: false };
-  const keymap: Record<string, keyof typeof held> = {
+  const keymap = {
     ArrowUp: "up",
     KeyW: "up",
     ArrowDown: "down",
@@ -89,6 +129,11 @@ async function main() {
     KeyD: "right",
   };
   addEventListener("keydown", (e) => {
+    if (document.activeElement === chatInput) return;
+    if (e.code === "Enter") {
+      chatInput.focus();
+      return;
+    }
     const k = keymap[e.code];
     if (k && !held[k]) {
       held[k] = true;
@@ -96,6 +141,7 @@ async function main() {
     }
   });
   addEventListener("keyup", (e) => {
+    if (document.activeElement === chatInput) return;
     const k = keymap[e.code];
     if (k && held[k]) {
       held[k] = false;

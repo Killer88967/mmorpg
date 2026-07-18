@@ -4,6 +4,7 @@ export class Player extends Schema {
   @type("number") x: number = 0;
   @type("number") y: number = 0;
   @type("string") color: string = "#ffffff";
+  @type("string") name: string = "";
 }
 
 export class WorldState extends Schema {
