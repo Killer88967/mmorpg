@@ -344,8 +344,215 @@ async function main() {
     if (e.target === invModal) closeInv(); // click the backdrop to close
   });
 
+  // ---- slot context menu (right-click / long-press) ----
+  const ctxMenu = document.createElement("div");
+  ctxMenu.className = "ctx-menu";
+  document.body.appendChild(ctxMenu);
+  let longPressed = false;
+
+  const SLOT_ACTIONS = [
+    { id: "link", label: "🔗 Link in chat" },
+    { id: "trade", label: "💰 Trade" },
+    { id: "discard", label: "🗑️ Discard", danger: true },
+    { id: "craft", label: "🔨 Craft", disabled: true },
+  ];
+
+  function openCtxMenu(item, x, y) {
+    ctxMenu.innerHTML = "";
+    for (const a of SLOT_ACTIONS) {
+      const b = document.createElement("button");
+      b.className =
+        "ctx-item" +
+        (a.danger ? " is-danger" : "") +
+        (a.disabled ? " is-disabled" : "");
+      b.textContent = a.label;
+      if (a.disabled) b.disabled = true;
+      else
+        b.onclick = () => {
+          closeCtxMenu();
+          doSlotAction(a.id, item);
+        };
+      ctxMenu.append(b);
+    }
+    ctxMenu.classList.add("is-open");
+    const mr = ctxMenu.getBoundingClientRect();
+    ctxMenu.style.left =
+      Math.max(8, Math.min(x, window.innerWidth - mr.width - 8)) + "px";
+    ctxMenu.style.top =
+      Math.max(8, Math.min(y, window.innerHeight - mr.height - 8)) + "px";
+  }
+  function closeCtxMenu() {
+    ctxMenu.classList.remove("is-open");
+  }
+
+  function doSlotAction(id, item) {
+    const def = ITEM_DB[item] || { name: item };
+    const have = myInventory[item] ?? 0;
+    if (id === "link") {
+      closeInv();
+      openChat();
+      chatInput.value += `{${item}} `;
+      chatInput.focus();
+    } else if (id === "trade") {
+      closeInv();
+      openTradeModal(item);
+    } else if (id === "discard") {
+      if (have > 0 && confirm(`Discard all ${have} ${def.name}?`))
+        room.send("discard", { item, count: have });
+    }
+  }
+
+  // ---- trade builder modal ----
+  const tradeModal = document.createElement("div");
+  tradeModal.className = "trade-modal";
+  tradeModal.innerHTML =
+    `<div class="trade-box">` +
+      `<div class="trade-head"><span class="trade-title">Create Offer</span>` +
+      `<button class="trade-close" aria-label="Close">✕</button></div>` +
+      `<div class="trade-body">` +
+        `<label class="trade-label">You give</label>` +
+        `<div class="trade-row">` +
+          `<select class="trade-give-item"></select>` +
+          `<input class="trade-give-count" type="number" min="1" value="1">` +
+        `</div>` +
+        `<label class="trade-toggle"><input type="checkbox" class="trade-want-on"> Ask for something in return</label>` +
+        `<div class="trade-want-fields">` +
+          `<label class="trade-label">You want</label>` +
+          `<div class="trade-row">` +
+            `<select class="trade-want-item"></select>` +
+            `<input class="trade-want-count" type="number" min="1" value="1">` +
+          `</div>` +
+        `</div>` +
+        `<div class="trade-error"></div>` +
+        `<button class="trade-post">Post Gift</button>` +
+      `</div>` +
+    `</div>`;
+  document.body.appendChild(tradeModal);
+
+  const tgItem = tradeModal.querySelector(".trade-give-item");
+  const tgCount = tradeModal.querySelector(".trade-give-count");
+  const twOn = tradeModal.querySelector(".trade-want-on");
+  const twFields = tradeModal.querySelector(".trade-want-fields");
+  const twItem = tradeModal.querySelector(".trade-want-item");
+  const twCount = tradeModal.querySelector(".trade-want-count");
+  const tErr = tradeModal.querySelector(".trade-error");
+  const tPost = tradeModal.querySelector(".trade-post");
+
+  function openTradeModal(prefillItem) {
+    const owned = Object.entries(myInventory).filter(([, n]) => n > 0);
+    if (!owned.length) {
+      appendSystem("You have nothing to trade.");
+      return;
+    }
+    tgItem.innerHTML = owned
+      .map(([item, n]) => {
+        const def = ITEM_DB[item] || { name: item };
+        return `<option value="${item}">${def.name} (have ${n})</option>`;
+      })
+      .join("");
+    if (prefillItem && (myInventory[prefillItem] ?? 0) > 0)
+      tgItem.value = prefillItem;
+    tgCount.value = "1";
+
+    twItem.innerHTML = Object.keys(ITEM_DB)
+      .map((item) => `<option value="${item}">${ITEM_DB[item].name}</option>`)
+      .join("");
+    twOn.checked = false;
+    twFields.style.display = "none";
+    twCount.value = "1";
+    tPost.textContent = "Post Gift";
+    tErr.textContent = "";
+    tradeModal.classList.add("is-open");
+  }
+  function closeTradeModal() {
+    tradeModal.classList.remove("is-open");
+  }
+
+  twOn.addEventListener("change", () => {
+    twFields.style.display = twOn.checked ? "block" : "none";
+    tPost.textContent = twOn.checked ? "Post Offer" : "Post Gift";
+  });
+  tradeModal.querySelector(".trade-close").onclick = closeTradeModal;
+  tradeModal.addEventListener("click", (e) => {
+    if (e.target === tradeModal) closeTradeModal();
+  });
+
+  tPost.onclick = () => {
+    const giveItem = tgItem.value;
+    const giveCount = Math.floor(Number(tgCount.value));
+    if (!giveItem || !(giveCount >= 1)) {
+      tErr.textContent = "Pick an item and amount.";
+      return;
+    }
+    if ((myInventory[giveItem] ?? 0) < giveCount) {
+      tErr.textContent = `You only have ${myInventory[giveItem] ?? 0}.`;
+      return;
+    }
+    const payload = { give: { item: giveItem, count: giveCount } };
+    if (twOn.checked) {
+      const wantItem = twItem.value;
+      const wantCount = Math.floor(Number(twCount.value));
+      if (!wantItem || !(wantCount >= 1)) {
+        tErr.textContent = "Set what you want back.";
+        return;
+      }
+      payload.want = { item: wantItem, count: wantCount };
+    }
+    room.send("offer", payload);
+    closeTradeModal();
+  };
+
+  // a "＋ Offer" button in the inventory modal header
+  const newOfferBtn = document.createElement("button");
+  newOfferBtn.className = "inv-newoffer";
+  newOfferBtn.textContent = "＋ Offer";
+  invModal
+    .querySelector(".inv-modal-head")
+    .insertBefore(newOfferBtn, invModal.querySelector(".inv-modal-close"));
+  newOfferBtn.onclick = () => {
+    closeInv();
+    openTradeModal();
+  };
+
+  // right-click (desktop)
+  invGrid.addEventListener("contextmenu", (e) => {
+    const slot = e.target.closest(".inv-slot");
+    if (!slot) return;
+    e.preventDefault();
+    openCtxMenu(slot.dataset.item, e.clientX, e.clientY);
+  });
+
+  // long-press (touch / iPad)
+  let pressTimer = null;
+  invGrid.addEventListener(
+    "touchstart",
+    (e) => {
+      const slot = e.target.closest(".inv-slot");
+      if (!slot) return;
+      longPressed = false;
+      const t = e.touches[0];
+      pressTimer = setTimeout(() => {
+        longPressed = true;
+        openCtxMenu(slot.dataset.item, t.clientX, t.clientY);
+      }, 450);
+    },
+    { passive: true },
+  );
+  invGrid.addEventListener("touchend", () => clearTimeout(pressTimer));
+  invGrid.addEventListener("touchmove", () => clearTimeout(pressTimer));
+
+  // close on outside click (and swallow the click that follows a long-press)
+  document.addEventListener("click", (e) => {
+    if (longPressed) {
+      longPressed = false;
+      return;
+    }
+    if (!e.target.closest(".ctx-menu")) closeCtxMenu();
+  });
+
   // click a slot to inspect it (reuses the item tooltip)
   invGrid.addEventListener("click", (e) => {
+    if (longPressed) return;
     const slot = e.target.closest(".inv-slot");
     if (!slot) return;
     fillTooltip(slot.dataset.item);
@@ -495,10 +702,12 @@ async function main() {
     line.className = "chat-line chat-offer";
     const who = document.createElement("span");
     who.className = "chat-name";
-    who.textContent = fromName + " offers ";
+    who.textContent = fromName + (want ? " offers " : " is giving away ");
     line.append(who, makeItemChip(give.item, give.count));
-    line.append(document.createTextNode(" for "));
-    line.append(makeItemChip(want.item, want.count));
+    if (want) {
+      line.append(document.createTextNode(" for "));
+      line.append(makeItemChip(want.item, want.count));
+    }
 
     const btn = document.createElement("button");
     btn.className = "offer-btn";
@@ -507,7 +716,7 @@ async function main() {
       btn.classList.add("is-cancel");
       btn.onclick = () => room.send("cancelOffer", { id });
     } else {
-      btn.textContent = "Accept";
+      btn.textContent = want ? "Accept" : "Claim";
       btn.onclick = () => room.send("accept", { id });
     }
     line.append(btn);
@@ -554,6 +763,10 @@ async function main() {
     }
     if (e.code === "KeyE") {
       room.send("harvest");
+      return;
+    }
+    if (e.code === "Escape" && ctxMenu.classList.contains("is-open")) {
+      closeCtxMenu();
       return;
     }
     if (e.code === "Escape" && invOpen) {

@@ -146,8 +146,9 @@ export class WorldRoom extends Room {
       const player = this.state.players.get(client.sessionId);
       if (!player) return;
       const give = normItem(data?.give);
-      const want = normItem(data?.want);
-      if (!give || !want) return;
+      const want = data?.want ? normItem(data?.want) : null; // no want = free gift
+      if (!give) return;
+      if (data?.want && !want) return; // want was specified but invalid
 
       const inv = this.inventories.get(client.sessionId) ?? {};
       if (!invHas(inv, give.item, give.count)) {
@@ -168,7 +169,7 @@ export class WorldRoom extends Room {
       this.clock.setTimeout(() => {
         if (this.offers.delete(id))
           this.broadcast("offerClosed", { id, status: "expired" });
-      }, 120000); // auto-expire after 2 min
+      }, 120000);
     });
 
     // accept someone's offer — re-validates BOTH sides, then swaps atomically
@@ -194,7 +195,7 @@ export class WorldRoom extends Room {
         client.send("offerError", "The offerer no longer has the goods.");
         return;
       }
-      if (!invHas(buyerInv, offer.want.item, offer.want.count)) {
+      if (offer.want && !invHas(buyerInv, offer.want.item, offer.want.count)) {
         client.send(
           "offerError",
           `You don't have ${offer.want.count} ${offer.want.item}.`,
@@ -205,8 +206,10 @@ export class WorldRoom extends Room {
       // atomic swap (synchronous — no await between check and mutation)
       invSub(sellerInv, offer.give.item, offer.give.count);
       invAdd(buyerInv, offer.give.item, offer.give.count);
-      invSub(buyerInv, offer.want.item, offer.want.count);
-      invAdd(sellerInv, offer.want.item, offer.want.count);
+      if (offer.want) {
+        invSub(buyerInv, offer.want.item, offer.want.count);
+        invAdd(sellerInv, offer.want.item, offer.want.count);
+      }
       this.offers.delete(offer.id);
 
       const buyerName =
@@ -221,7 +224,6 @@ export class WorldRoom extends Room {
         by: buyerName,
       });
 
-      // persist both sides immediately (best-effort)
       this.saveOne(offer.fromName, sellerInv);
       this.saveOne(buyerName, buyerInv);
     });
@@ -232,6 +234,20 @@ export class WorldRoom extends Room {
       if (!offer || offer.fromId !== client.sessionId) return;
       this.offers.delete(offer.id);
       this.broadcast("offerClosed", { id: offer.id, status: "cancelled" });
+    });
+
+    // discard items
+    this.onMessage("discard", (client, data) => {
+      const item = String(data?.item ?? "")
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, "");
+      let count = Math.floor(Number(data?.count));
+      const inv = this.inventories.get(client.sessionId);
+      if (!inv || !item || !Number.isFinite(count) || count < 1) return;
+      const have = inv[item] ?? 0;
+      if (have <= 0) return;
+      invSub(inv, item, Math.min(count, have));
+      client.send("inventory", inv);
     });
 
     // fixed simulation tick — 30fps
