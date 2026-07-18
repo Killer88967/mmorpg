@@ -82,6 +82,99 @@ canvas {
   color: color-mix(in srgb, var(--item-color) 65%, #fff);
 }
 
+/* make chips clickable even though the chat log is click-through */
+.chat-item {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* --- item tooltip --- */
+.item-tooltip {
+  position: fixed;
+  z-index: 50;
+  min-width: 160px;
+  max-width: 240px;
+  padding: 10px 12px;
+  font:
+    13px system-ui,
+    sans-serif;
+  color: #e8edf3;
+  background: rgba(12, 14, 20, 0.96);
+  border: 1px solid #3a4050;
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+}
+.item-tooltip.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.tt-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tt-icon {
+  font-size: 16px;
+}
+.tt-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+.tt-type {
+  font-size: 11px;
+  color: #8a93a3;
+  text-transform: capitalize;
+  margin-top: 2px;
+}
+.tt-stats {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tt-stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.tt-stat span:first-child {
+  color: #9fb0c3;
+}
+.tt-stat span:last-child {
+  font-weight: 600;
+  color: #fff;
+}
+.tt-desc {
+  margin-top: 8px;
+  font-size: 12px;
+  font-style: italic;
+  color: #aeb7c4;
+  line-height: 1.35;
+}
+
+/* rarity colors */
+.tt-common {
+  color: #cfd8e3;
+}
+.tt-uncommon {
+  color: #5fd15f;
+}
+.tt-rare {
+  color: #4aa3ff;
+}
+.tt-epic {
+  color: #b76bff;
+}
+.tt-legendary {
+  color: #f0a020;
+}
+
 /* --- inventory panel --- */
 .inv-panel {
   position: fixed;

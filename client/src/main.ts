@@ -87,23 +87,54 @@ async function main() {
   });
   room.send("ready"); // request our initial inventory
 
-  // ---- item links in chat ({wood} or {wood::10}) ----
-  const ITEM_STYLE = {
-    wood: { color: "#b08968", icon: "🪵" },
-    stone: { color: "#9aa3ad", icon: "🪨" },
-    ore: { color: "#e0a458", icon: "⛏" },
+  // ---- item database: what each item IS (drives chips + tooltips) ----
+  const ITEM_DB = {
+    wood: {
+      name: "Wood",
+      icon: "🪵",
+      color: "#b08968",
+      rarity: "common",
+      type: "Material",
+      desc: "A sturdy log. Useful for building and crafting.",
+    },
+    stone: {
+      name: "Stone",
+      icon: "🪨",
+      color: "#9aa3ad",
+      rarity: "common",
+      type: "Material",
+      desc: "Rough rock — the backbone of any structure.",
+    },
+    ore: {
+      name: "Iron Ore",
+      icon: "⛏️",
+      color: "#e0a458",
+      rarity: "uncommon",
+      type: "Material",
+      desc: "Raw iron, ready to be smelted.",
+    },
+    sword: {
+      name: "Iron Sword",
+      icon: "🗡️",
+      color: "#cfd8e3",
+      rarity: "uncommon",
+      type: "Weapon",
+      stats: { Damage: 12, "Attack Speed": "1.4/s", Reach: "1 tile" },
+      desc: "A dependable blade. Nothing fancy, but it gets the job done.",
+    },
   };
   const ITEM_RE = /\{([a-zA-Z][a-zA-Z0-9_]*)(?:::(\d+))?\}/g;
 
   function makeItemChip(item, count) {
-    const style = ITEM_STYLE[item] || { color: "#9fb0c3", icon: "📦" };
+    const def = ITEM_DB[item] || { name: item, color: "#9fb0c3", icon: "📦" };
     const chip = document.createElement("span");
     chip.className = "chat-item";
-    chip.style.setProperty("--item-color", style.color);
+    chip.dataset.item = item;
+    chip.style.setProperty("--item-color", def.color);
     const icon = document.createElement("span");
-    icon.textContent = style.icon;
+    icon.textContent = def.icon;
     const label = document.createElement("span");
-    label.textContent = item;
+    label.textContent = def.name;
     chip.append(icon, label);
     if (count != null) {
       const amt = document.createElement("span");
@@ -206,6 +237,81 @@ async function main() {
   chatInput.maxLength = 200;
   chatInput.placeholder = "Say something…";
   document.body.appendChild(chatInput);
+
+  // ---- item tooltip (tap to pin, hover to peek) ----
+  const tooltip = document.createElement("div");
+  tooltip.className = "item-tooltip";
+  document.body.appendChild(tooltip);
+  let pinnedChip = null;
+
+  function fillTooltip(item) {
+    const def = ITEM_DB[item] || {
+      name: item,
+      icon: "📦",
+      rarity: "common",
+      type: "Unknown",
+      desc: "You've never seen one of these.",
+    };
+    const rarity = def.rarity || "common";
+    let html =
+      `<div class="tt-head"><span class="tt-icon">${def.icon}</span>` +
+      `<span class="tt-name tt-${rarity}">${def.name}</span></div>` +
+      `<div class="tt-type">${def.type}${rarity !== "common" ? " · " + rarity : ""}</div>`;
+    if (def.stats)
+      html +=
+        `<div class="tt-stats">` +
+        Object.entries(def.stats)
+          .map(
+            ([k, v]) =>
+              `<div class="tt-stat"><span>${k}</span><span>${v}</span></div>`,
+          )
+          .join("") +
+        `</div>`;
+    if (def.desc) html += `<div class="tt-desc">${def.desc}</div>`;
+    tooltip.innerHTML = html;
+  }
+
+  function showTooltip(chip) {
+    fillTooltip(chip.dataset.item);
+    tooltip.classList.add("is-visible");
+    const r = chip.getBoundingClientRect();
+    const tr = tooltip.getBoundingClientRect();
+    let top = r.top - tr.height - 8;
+    if (top < 8) top = r.bottom + 8; // flip below if no room above
+    const left = Math.max(
+      8,
+      Math.min(r.left, window.innerWidth - tr.width - 8),
+    );
+    tooltip.style.left = left + "px";
+    tooltip.style.top = top + "px";
+  }
+
+  function hideTooltip() {
+    tooltip.classList.remove("is-visible");
+    pinnedChip = null;
+  }
+
+  chatLog.addEventListener("mouseover", (e) => {
+    const chip = e.target.closest(".chat-item");
+    if (!chip || pinnedChip) return;
+    showLog();
+    showTooltip(chip);
+  });
+  chatLog.addEventListener("mouseout", (e) => {
+    if (pinnedChip) return;
+    if (e.target.closest(".chat-item")) hideTooltip();
+  });
+  chatLog.addEventListener("click", (e) => {
+    const chip = e.target.closest(".chat-item");
+    if (!chip) return;
+    if (pinnedChip === chip) return hideTooltip();
+    pinnedChip = chip;
+    showLog();
+    showTooltip(chip);
+  });
+  document.addEventListener("click", (e) => {
+    if (pinnedChip && !e.target.closest(".chat-item")) hideTooltip();
+  });
 
   let chatOpen = false;
   let fadeTimer;
