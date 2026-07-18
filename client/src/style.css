@@ -62,3 +62,66 @@ canvas {
 .chat-input.is-open {
   display: block;
 }
+
+/* --- chat item links --- */
+.chat-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px 1px 5px;
+  margin: 0 1px;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: color-mix(in srgb, var(--item-color) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--item-color) 55%, transparent);
+}
+.chat-item-amt {
+  font-weight: 700;
+  color: color-mix(in srgb, var(--item-color) 65%, #fff);
+}
+
+/* --- inventory panel --- */
+.inv-panel {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  min-width: 130px;
+  padding: 10px 12px;
+  font:
+    13px system-ui,
+    sans-serif;
+  color: #f0f0f0;
+  background: rgba(10, 12, 18, 0.8);
+  border: 1px solid #3a4050;
+  border-radius: 8px;
+  text-shadow: 0 1px 2px #000;
+}
+.inv-title {
+  font:
+    700 12px system-ui,
+    sans-serif;
+  color: #7fd1ff;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.inv-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 2px 0;
+}
+.inv-name {
+  text-transform: capitalize;
+  color: #cbd5e1;
+}
+.inv-count {
+  font-weight: 700;
+  color: #fff;
+}
+.inv-empty {
+  color: #8a93a3;
+  font-style: italic;
+}

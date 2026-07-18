@@ -13,5 +13,6 @@ model Character {
   x         Float    @default(300)
   y         Float    @default(300)
   color     String   @default("#ffffff")
+  inventory String   @default("{}")
   updatedAt DateTime @updatedAt
 }

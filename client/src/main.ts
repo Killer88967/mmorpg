@@ -17,16 +17,21 @@ async function main() {
   app.stage.addChild(world);
 
   const COLORS = { 0: 0x2e7d32, 1: 0x1565c0, 2: 0xb08968, 3: 0x1b3a1b };
+  let localTiles = [];
+  let mapMeta = { cols: 0, rows: 0, tile: 0 };
+  let groundGfx = null;
 
-  function buildMap(state) {
+  function buildMap() {
+    if (groundGfx) groundGfx.destroy();
     const g = new Graphics();
-    const t = state.tile;
-    for (let r = 0; r < state.rows; r++)
-      for (let c = 0; c < state.cols; c++)
+    const t = mapMeta.tile;
+    for (let r = 0; r < mapMeta.rows; r++)
+      for (let c = 0; c < mapMeta.cols; c++)
         g.rect(c * t, r * t, t, t).fill(
-          COLORS[state.tiles[r * state.cols + c]] ?? 0x000000,
+          COLORS[localTiles[r * mapMeta.cols + c]] ?? 0x000000,
         );
     world.addChildAt(g, 0);
+    groundGfx = g;
   }
 
   const sprites = new Map();
@@ -40,8 +45,103 @@ async function main() {
   room.onStateChange(() => {
     if (mapBuilt || room.state.tiles.length === 0) return;
     mapBuilt = true;
-    buildMap(room.state);
+    mapMeta = {
+      cols: room.state.cols,
+      rows: room.state.rows,
+      tile: room.state.tile,
+    };
+    localTiles = Array.from(room.state.tiles);
+    buildMap();
   });
+
+  // live tile changes (harvested / respawned trees)
+  room.onMessage("tileUpdate", ({ index, type }) => {
+    localTiles[index] = type;
+    buildMap();
+  });
+
+  // ---- inventory panel (your own only) ----
+  let myInventory = {};
+
+  const invPanel = document.createElement("div");
+  invPanel.className = "inv-panel";
+  document.body.appendChild(invPanel);
+
+  function renderInventory(inv) {
+    const entries = Object.entries(inv).filter(([, n]) => n > 0);
+    invPanel.innerHTML =
+      `<div class="inv-title">Inventory</div>` +
+      (entries.length
+        ? entries
+            .map(
+              ([item, n]) =>
+                `<div class="inv-item"><span class="inv-name">${item}</span><span class="inv-count">${n}</span></div>`,
+            )
+            .join("")
+        : `<div class="inv-empty">empty</div>`);
+  }
+  renderInventory({});
+  room.onMessage("inventory", (inv) => {
+    myInventory = inv;
+    renderInventory(inv);
+  });
+  room.send("ready"); // request our initial inventory
+
+  // ---- item links in chat ({wood} or {wood::10}) ----
+  const ITEM_STYLE = {
+    wood: { color: "#b08968", icon: "🪵" },
+    stone: { color: "#9aa3ad", icon: "🪨" },
+    ore: { color: "#e0a458", icon: "⛏" },
+  };
+  const ITEM_RE = /\{([a-zA-Z][a-zA-Z0-9_]*)(?:::(\d+))?\}/g;
+
+  function makeItemChip(item, count) {
+    const style = ITEM_STYLE[item] || { color: "#9fb0c3", icon: "📦" };
+    const chip = document.createElement("span");
+    chip.className = "chat-item";
+    chip.style.setProperty("--item-color", style.color);
+    const icon = document.createElement("span");
+    icon.textContent = style.icon;
+    const label = document.createElement("span");
+    label.textContent = item;
+    chip.append(icon, label);
+    if (count != null) {
+      const amt = document.createElement("span");
+      amt.className = "chat-item-amt";
+      amt.textContent = "×" + count;
+      chip.append(amt);
+    }
+    return chip;
+  }
+
+  function appendText(line, text) {
+    let last = 0,
+      m;
+    ITEM_RE.lastIndex = 0;
+    while ((m = ITEM_RE.exec(text))) {
+      if (m.index > last)
+        line.appendChild(document.createTextNode(text.slice(last, m.index)));
+      line.appendChild(
+        makeItemChip(
+          m[1].toLowerCase(),
+          m[2] !== undefined ? parseInt(m[2], 10) : null,
+        ),
+      );
+      last = m.index + m[0].length;
+    }
+    if (last < text.length)
+      line.appendChild(document.createTextNode(text.slice(last)));
+  }
+
+  function expandItemTokens(text) {
+    return text.replace(
+      /\{([a-zA-Z][a-zA-Z0-9_]*)(?:::(\d+))?\}/g,
+      (full, item, count) =>
+        count !== undefined
+          ? full
+          : `{${item}::${myInventory[item.toLowerCase()] ?? 0}}`,
+    );
+  }
 
   $.onAdd("players", (player, sessionId) => {
     const g = new Graphics().rect(-12, -12, 24, 24).fill(player.color);
@@ -144,7 +244,7 @@ async function main() {
     who.className = "chat-name";
     who.textContent = name + ": ";
     line.appendChild(who);
-    line.appendChild(document.createTextNode(text));
+    appendText(line, text);
     chatLog.appendChild(line);
     while (chatLog.childNodes.length > 12)
       chatLog.removeChild(chatLog.firstChild);
@@ -155,7 +255,7 @@ async function main() {
     e.stopPropagation();
     if (e.key === "Enter") {
       const text = chatInput.value.trim();
-      if (text) room.send("chat", text);
+      if (text) room.send("chat", expandItemTokens(text));
       closeChat();
     } else if (e.key === "Escape") {
       closeChat();
@@ -168,12 +268,16 @@ async function main() {
     if (!chatOpen) scheduleFade();
   });
 
-  // ---- keyboard: Enter opens chat, WASD moves (only when chat closed) ----
+  // ---- keyboard: Enter opens chat, E harvests, WASD moves (only when chat closed) ----
   addEventListener("keydown", (e) => {
     if (chatOpen) return;
     if (e.code === "Enter") {
       e.preventDefault();
       openChat();
+      return;
+    }
+    if (e.code === "KeyE") {
+      room.send("harvest");
       return;
     }
     const k = keymap[e.code];

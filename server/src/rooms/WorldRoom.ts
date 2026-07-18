@@ -15,6 +15,7 @@ export class WorldRoom extends Room {
   maxClients = 32;
 
   private inputs = new Map<string, Input>();
+  private inventories = new Map<string, Record<string, number>>();
 
   private generateMap() {
     const idx = (c: number, r: number) => r * COLS + c;
@@ -44,11 +45,12 @@ export class WorldRoom extends Room {
   }
 
   private async saveAll() {
-    for (const [, player] of this.state.players) {
+    for (const [id, player] of this.state.players) {
+      const inv = this.inventories.get(id) ?? {};
       await prisma.character
         .update({
           where: { name: player.name },
-          data: { x: player.x, y: player.y },
+          data: { x: player.x, y: player.y, inventory: JSON.stringify(inv) },
         })
         .catch(() => {});
     }
@@ -81,6 +83,54 @@ export class WorldRoom extends Room {
       const clean = String(text).slice(0, 200).trim();
       if (!clean) return;
       this.broadcast("chat", { name: player?.name || "Anon", text: clean });
+    });
+
+    // send a player their inventory once they're ready to receive it
+    this.onMessage("ready", (client) => {
+      client.send("inventory", this.inventories.get(client.sessionId) ?? {});
+    });
+
+    // chop a nearby tree
+    this.onMessage("harvest", (client) => {
+      const player = this.state.players.get(client.sessionId);
+      if (!player) return;
+      const pc = Math.floor(player.x / TILE);
+      const pr = Math.floor(player.y / TILE);
+
+      // find the closest tree tile in the 3x3 around the player
+      let best = -1,
+        bestDist = Infinity;
+      for (let dr = -1; dr <= 1; dr++)
+        for (let dc = -1; dc <= 1; dc++) {
+          const c = pc + dc,
+            r = pr + dr;
+          if (c < 0 || r < 0 || c >= COLS || r >= ROWS) continue;
+          const i = r * COLS + c;
+          if (this.state.tiles[i] !== 3) continue;
+          const cx = c * TILE + TILE / 2,
+            cy = r * TILE + TILE / 2;
+          const d = (cx - player.x) ** 2 + (cy - player.y) ** 2;
+          if (d < bestDist) {
+            bestDist = d;
+            best = i;
+          }
+        }
+      if (best < 0) return; // no tree in range
+
+      // remove it (turns walkable), grant wood, tell everyone the tile changed
+      this.state.tiles[best] = 0;
+      this.broadcast("tileUpdate", { index: best, type: 0 });
+
+      const inv = this.inventories.get(client.sessionId) ?? {};
+      inv.wood = (inv.wood ?? 0) + 1;
+      this.inventories.set(client.sessionId, inv);
+      client.send("inventory", inv);
+
+      // respawn the tree after 10s
+      this.clock.setTimeout(() => {
+        this.state.tiles[best] = 3;
+        this.broadcast("tileUpdate", { index: best, type: 3 });
+      }, 10000);
     });
 
     // fixed simulation tick — 30fps
@@ -127,6 +177,11 @@ export class WorldRoom extends Room {
     player.color = record.color;
     player.name = record.name;
     this.state.players.set(client.sessionId, player);
+    let inv: Record<string, number> = {};
+    try {
+      inv = JSON.parse(record.inventory || "{}");
+    } catch {}
+    this.inventories.set(client.sessionId, inv);
     this.inputs.set(client.sessionId, {
       up: false,
       down: false,
@@ -138,15 +193,17 @@ export class WorldRoom extends Room {
   async onLeave(client: Client) {
     const player = this.state.players.get(client.sessionId);
     if (player) {
+      const inv = this.inventories.get(client.sessionId) ?? {};
       await prisma.character
         .update({
           where: { name: player.name },
-          data: { x: player.x, y: player.y },
+          data: { x: player.x, y: player.y, inventory: JSON.stringify(inv) },
         })
         .catch(() => {});
     }
     this.state.players.delete(client.sessionId);
     this.inputs.delete(client.sessionId);
+    this.inventories.delete(client.sessionId);
   }
 }
 
