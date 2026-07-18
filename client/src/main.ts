@@ -87,6 +87,7 @@ async function main() {
   room.onMessage("inventory", (inv) => {
     myInventory = inv;
     renderInventory(inv);
+    if (invOpen) renderInvGrid();
   });
   room.send("ready"); // request our initial inventory
 
@@ -278,6 +279,85 @@ async function main() {
   tooltip.className = "item-tooltip";
   document.body.appendChild(tooltip);
   let pinnedChip = null;
+
+  // ---- full inventory popup (key I/B or bag button) ----
+  const bagButton = document.createElement("button");
+  bagButton.className = "bag-button";
+  bagButton.textContent = "🎒";
+  bagButton.title = "Inventory (I)";
+  document.body.appendChild(bagButton);
+
+  const invModal = document.createElement("div");
+  invModal.className = "inv-modal";
+  invModal.innerHTML =
+    `<div class="inv-modal-box">` +
+    `<div class="inv-modal-head">` +
+    `<span class="inv-modal-title">Inventory</span>` +
+    `<button class="inv-modal-close" aria-label="Close">✕</button>` +
+    `</div><div class="inv-grid"></div></div>`;
+  document.body.appendChild(invModal);
+
+  const invGrid = invModal.querySelector(".inv-grid");
+  let invOpen = false;
+
+  function renderInvGrid() {
+    const entries = Object.entries(myInventory).filter(([, n]) => n > 0);
+    invGrid.innerHTML = "";
+    if (!entries.length) {
+      const empty = document.createElement("div");
+      empty.className = "inv-grid-empty";
+      empty.textContent = "Your bag is empty. Go chop some trees!";
+      invGrid.append(empty);
+      return;
+    }
+    for (const [item, n] of entries) {
+      const def = ITEM_DB[item] || { name: item, icon: "📦", color: "#9fb0c3" };
+      const slot = document.createElement("button");
+      slot.className = "inv-slot";
+      slot.dataset.item = item;
+      slot.style.setProperty("--item-color", def.color);
+      slot.innerHTML =
+        `<span class="inv-slot-icon">${def.icon}</span>` +
+        `<span class="inv-slot-count">${n}</span>` +
+        `<span class="inv-slot-name">${def.name}</span>`;
+      invGrid.append(slot);
+    }
+  }
+
+  function openInv() {
+    invOpen = true;
+    renderInvGrid();
+    invModal.classList.add("is-open");
+  }
+  function closeInv() {
+    invOpen = false;
+    invModal.classList.remove("is-open");
+    hideTooltip();
+  }
+  function toggleInv() {
+    invOpen ? closeInv() : openInv();
+  }
+
+  bagButton.onclick = toggleInv;
+  invModal.querySelector(".inv-modal-close").onclick = closeInv;
+  invModal.addEventListener("click", (e) => {
+    if (e.target === invModal) closeInv(); // click the backdrop to close
+  });
+
+  // click a slot to inspect it (reuses the item tooltip)
+  invGrid.addEventListener("click", (e) => {
+    const slot = e.target.closest(".inv-slot");
+    if (!slot) return;
+    fillTooltip(slot.dataset.item);
+    tooltip.classList.add("is-visible");
+    const r = slot.getBoundingClientRect();
+    const tr = tooltip.getBoundingClientRect();
+    let top = r.bottom + 8;
+    if (top + tr.height > window.innerHeight - 8) top = r.top - tr.height - 8;
+    tooltip.style.left =
+      Math.max(8, Math.min(r.left, window.innerWidth - tr.width - 8)) + "px";
+    tooltip.style.top = top + "px";
+  });
 
   function fillTooltip(item) {
     const def = ITEM_DB[item] || {
@@ -474,6 +554,14 @@ async function main() {
     }
     if (e.code === "KeyE") {
       room.send("harvest");
+      return;
+    }
+    if (e.code === "Escape" && invOpen) {
+      closeInv();
+      return;
+    }
+    if (e.code === "KeyI" || e.code === "KeyB") {
+      toggleInv();
       return;
     }
     const k = keymap[e.code];

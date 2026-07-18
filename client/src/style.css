@@ -259,3 +259,129 @@ canvas {
   color: #8a93a3;
   font-style: italic;
 }
+/* --- bag button --- */
+.bag-button {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  width: 48px;
+  height: 48px;
+  font-size: 22px;
+  background: rgba(10, 12, 18, 0.85);
+  border: 1px solid #3a4050;
+  border-radius: 10px;
+  cursor: pointer;
+  z-index: 30;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+.bag-button:hover {
+  border-color: #7fd1ff;
+}
+
+/* --- inventory modal --- */
+.inv-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+.inv-modal.is-open {
+  display: flex;
+}
+.inv-modal-box {
+  width: min(90vw, 420px);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(16, 19, 26, 0.98);
+  border: 1px solid #3a4050;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+.inv-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #2a2f3a;
+}
+.inv-modal-title {
+  font:
+    700 15px system-ui,
+    sans-serif;
+  color: #7fd1ff;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.inv-modal-close {
+  background: none;
+  border: none;
+  color: #8a93a3;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.inv-modal-close:hover {
+  color: #fff;
+}
+.inv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 10px;
+  padding: 16px;
+  overflow-y: auto;
+}
+.inv-grid-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #8a93a3;
+  font:
+    italic 13px system-ui,
+    sans-serif;
+  padding: 24px 0;
+}
+.inv-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 6px 8px;
+  background: color-mix(
+    in srgb,
+    var(--item-color) 12%,
+    rgba(255, 255, 255, 0.02)
+  );
+  border: 1px solid color-mix(in srgb, var(--item-color) 45%, transparent);
+  border-radius: 10px;
+  color: #e8edf3;
+  cursor: pointer;
+  font:
+    12px system-ui,
+    sans-serif;
+}
+.inv-slot:hover {
+  border-color: var(--item-color);
+}
+.inv-slot-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+.inv-slot-count {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-weight: 700;
+  font-size: 12px;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}
+.inv-slot-name {
+  text-transform: capitalize;
+  color: #cbd5e1;
+  text-align: center;
+}
