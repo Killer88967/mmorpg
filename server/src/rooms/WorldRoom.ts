@@ -54,6 +54,16 @@ export class WorldRoom extends Room {
     }
   }
 
+  private randomSpawn(): { x: number; y: number } {
+    for (let i = 0; i < 100; i++) {
+      const x = Math.random() * WORLD.w;
+      const y = Math.random() * WORLD.h;
+      if (!SOLID.has(tileAt(this.state, x, y))) return { x, y };
+    }
+    // fallback: center of the crossroads (always walkable path)
+    return { x: 16 * TILE + TILE / 2, y: 16 * TILE + TILE / 2 };
+  }
+
   onCreate() {
     this.generateMap();
 
@@ -104,15 +114,11 @@ export class WorldRoom extends Room {
 
   async onJoin(client: Client, options: { name?: string }) {
     const name = (options?.name || "Anon").slice(0, 16);
+    const spawn = this.randomSpawn();
     const record = await prisma.character.upsert({
       where: { name },
       update: {},
-      create: {
-        name,
-        x: Math.random() * 400 + 100,
-        y: Math.random() * 400 + 100,
-        color: randomColor(),
-      },
+      create: { name, x: spawn.x, y: spawn.y, color: randomColor() },
     });
 
     const player = new Player();

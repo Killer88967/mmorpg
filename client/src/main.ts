@@ -1,4 +1,5 @@
 //@ts-nocheck
+import "./style.css";
 import { Client, Callbacks } from "@colyseus/sdk";
 import { Application, Graphics, Container, Text } from "pixi.js";
 import type { WorldState } from "../../server/src/rooms/schema/WorldState";
@@ -9,7 +10,7 @@ const ENDPOINT = location.hostname.endsWith(".app.github.dev")
 
 async function main() {
   const app = new Application();
-  await app.init({ width: 800, height: 600, background: "#101014" });
+  await app.init({ resizeTo: window, background: "#0d0f14" });
   document.body.appendChild(app.canvas);
 
   const world = new Container();
@@ -82,41 +83,7 @@ async function main() {
     world.y = app.screen.height / 2 - me.y;
   });
 
-  // ---- chat UI (HTML overlay on top of the canvas) ----
-  const chatLog = document.createElement("div");
-  chatLog.style.cssText =
-    "position:fixed;left:8px;bottom:46px;width:320px;max-height:180px;overflow-y:auto;font:13px monospace;color:#eee;text-shadow:0 1px 2px #000;pointer-events:none;";
-  document.body.appendChild(chatLog);
-
-  const chatInput = document.createElement("input");
-  chatInput.placeholder = "Press Enter to chat…";
-  chatInput.style.cssText =
-    "position:fixed;left:8px;bottom:8px;width:320px;padding:6px 8px;font:13px monospace;background:#000a;color:#fff;border:1px solid #444;border-radius:4px;";
-  document.body.appendChild(chatInput);
-
-  chatInput.addEventListener("keydown", (e) => {
-    e.stopPropagation();
-    if (e.key === "Enter") {
-      const text = chatInput.value.trim();
-      if (text) room.send("chat", text);
-      chatInput.value = "";
-      chatInput.blur();
-    } else if (e.key === "Escape") {
-      chatInput.value = "";
-      chatInput.blur();
-    }
-  });
-
-  room.onMessage("chat", (msg) => {
-    const line = document.createElement("div");
-    line.textContent = `${msg.name}: ${msg.text}`;
-    chatLog.appendChild(line);
-    while (chatLog.childNodes.length > 8)
-      chatLog.removeChild(chatLog.firstChild);
-    chatLog.scrollTop = chatLog.scrollHeight;
-  });
-
-  // ---- input → server ----
+  // ---- input state ----
   const held = { up: false, down: false, left: false, right: false };
   const keymap = {
     ArrowUp: "up",
@@ -128,10 +95,85 @@ async function main() {
     ArrowRight: "right",
     KeyD: "right",
   };
+
+  // ---- chat: hidden until toggled, fades when idle ----
+  const chatLog = document.createElement("div");
+  chatLog.className = "chat-log";
+  document.body.appendChild(chatLog);
+
+  const chatInput = document.createElement("input");
+  chatInput.className = "chat-input";
+  chatInput.maxLength = 200;
+  chatInput.placeholder = "Say something…";
+  document.body.appendChild(chatInput);
+
+  let chatOpen = false;
+  let fadeTimer;
+
+  function showLog() {
+    clearTimeout(fadeTimer);
+    chatLog.classList.add("is-visible");
+  }
+  function scheduleFade() {
+    clearTimeout(fadeTimer);
+    fadeTimer = setTimeout(() => {
+      if (!chatOpen) chatLog.classList.remove("is-visible");
+    }, 5000);
+  }
+
+  function openChat() {
+    chatOpen = true;
+    for (const k in held) held[k] = false; // stop walking while typing
+    room.send("input", held);
+    chatInput.classList.add("is-open");
+    chatInput.focus();
+    showLog();
+  }
+  function closeChat() {
+    chatOpen = false;
+    chatInput.value = "";
+    chatInput.blur();
+    chatInput.classList.remove("is-open");
+    scheduleFade();
+  }
+
+  function appendLine(name, text) {
+    const line = document.createElement("div");
+    line.className = "chat-line";
+    const who = document.createElement("span");
+    who.className = "chat-name";
+    who.textContent = name + ": ";
+    line.appendChild(who);
+    line.appendChild(document.createTextNode(text));
+    chatLog.appendChild(line);
+    while (chatLog.childNodes.length > 12)
+      chatLog.removeChild(chatLog.firstChild);
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  chatInput.addEventListener("keydown", (e) => {
+    e.stopPropagation();
+    if (e.key === "Enter") {
+      const text = chatInput.value.trim();
+      if (text) room.send("chat", text);
+      closeChat();
+    } else if (e.key === "Escape") {
+      closeChat();
+    }
+  });
+
+  room.onMessage("chat", (msg) => {
+    appendLine(msg.name, msg.text);
+    showLog();
+    if (!chatOpen) scheduleFade();
+  });
+
+  // ---- keyboard: Enter opens chat, WASD moves (only when chat closed) ----
   addEventListener("keydown", (e) => {
-    if (document.activeElement === chatInput) return;
+    if (chatOpen) return;
     if (e.code === "Enter") {
-      chatInput.focus();
+      e.preventDefault();
+      openChat();
       return;
     }
     const k = keymap[e.code];
@@ -141,7 +183,7 @@ async function main() {
     }
   });
   addEventListener("keyup", (e) => {
-    if (document.activeElement === chatInput) return;
+    if (chatOpen) return;
     const k = keymap[e.code];
     if (k && held[k]) {
       held[k] = false;
