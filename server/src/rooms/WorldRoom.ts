@@ -16,6 +16,8 @@ export class WorldRoom extends Room {
 
   private inputs = new Map<string, Input>();
   private inventories = new Map<string, Record<string, number>>();
+  private offers = new Map<string, any>();
+  private offerSeq = 0;
 
   private generateMap() {
     const idx = (c: number, r: number) => r * COLS + c;
@@ -54,6 +56,12 @@ export class WorldRoom extends Room {
         })
         .catch(() => {});
     }
+  }
+
+  private async saveOne(name: string, inv: any) {
+    await prisma.character
+      .update({ where: { name }, data: { inventory: JSON.stringify(inv) } })
+      .catch(() => {});
   }
 
   private randomSpawn(): { x: number; y: number } {
@@ -133,6 +141,99 @@ export class WorldRoom extends Room {
       }, 10000);
     });
 
+    // post a trade offer to the whole server
+    this.onMessage("offer", (client, data) => {
+      const player = this.state.players.get(client.sessionId);
+      if (!player) return;
+      const give = normItem(data?.give);
+      const want = normItem(data?.want);
+      if (!give || !want) return;
+
+      const inv = this.inventories.get(client.sessionId) ?? {};
+      if (!invHas(inv, give.item, give.count)) {
+        client.send("offerError", `You don't have ${give.count} ${give.item}.`);
+        return;
+      }
+
+      const id = "o" + ++this.offerSeq;
+      this.offers.set(id, {
+        id,
+        fromId: client.sessionId,
+        fromName: player.name,
+        give,
+        want,
+      });
+      this.broadcast("offerPosted", { id, fromName: player.name, give, want });
+
+      this.clock.setTimeout(() => {
+        if (this.offers.delete(id))
+          this.broadcast("offerClosed", { id, status: "expired" });
+      }, 120000); // auto-expire after 2 min
+    });
+
+    // accept someone's offer — re-validates BOTH sides, then swaps atomically
+    this.onMessage("accept", (client, data) => {
+      const offer = this.offers.get(data?.id);
+      if (!offer) {
+        client.send("offerError", "That offer is no longer available.");
+        return;
+      }
+      if (offer.fromId === client.sessionId) return;
+
+      const sellerInv = this.inventories.get(offer.fromId);
+      const buyerInv = this.inventories.get(client.sessionId);
+      if (!sellerInv || !buyerInv) {
+        this.offers.delete(offer.id);
+        this.broadcast("offerClosed", { id: offer.id, status: "cancelled" });
+        client.send("offerError", "That offer is no longer available.");
+        return;
+      }
+      if (!invHas(sellerInv, offer.give.item, offer.give.count)) {
+        this.offers.delete(offer.id);
+        this.broadcast("offerClosed", { id: offer.id, status: "cancelled" });
+        client.send("offerError", "The offerer no longer has the goods.");
+        return;
+      }
+      if (!invHas(buyerInv, offer.want.item, offer.want.count)) {
+        client.send(
+          "offerError",
+          `You don't have ${offer.want.count} ${offer.want.item}.`,
+        );
+        return;
+      }
+
+      // atomic swap (synchronous — no await between check and mutation)
+      invSub(sellerInv, offer.give.item, offer.give.count);
+      invAdd(buyerInv, offer.give.item, offer.give.count);
+      invSub(buyerInv, offer.want.item, offer.want.count);
+      invAdd(sellerInv, offer.want.item, offer.want.count);
+      this.offers.delete(offer.id);
+
+      const buyerName =
+        this.state.players.get(client.sessionId)?.name ?? "someone";
+      client.send("inventory", buyerInv);
+      this.clients
+        .find((c) => c.sessionId === offer.fromId)
+        ?.send("inventory", sellerInv);
+      this.broadcast("offerClosed", {
+        id: offer.id,
+        status: "completed",
+        by: buyerName,
+      });
+
+      // persist both sides immediately (best-effort)
+      this.saveOne(offer.fromName, sellerInv);
+      this.saveOne(buyerName, buyerInv);
+    });
+
+    // cancel your own offer
+    this.onMessage("cancelOffer", (client, data) => {
+      const offer = this.offers.get(data?.id);
+      if (!offer || offer.fromId !== client.sessionId) return;
+      this.offers.delete(offer.id);
+      this.broadcast("offerClosed", { id: offer.id, status: "cancelled" });
+    });
+
     // fixed simulation tick — 30fps
     this.setSimulationInterval((dt) => this.update(dt), 1000 / 30);
     this.clock.setInterval(() => this.saveAll(), 15000);
@@ -203,6 +304,12 @@ export class WorldRoom extends Room {
     }
     this.state.players.delete(client.sessionId);
     this.inputs.delete(client.sessionId);
+    for (const [id, offer] of this.offers) {
+      if (offer.fromId === client.sessionId) {
+        this.offers.delete(id);
+        this.broadcast("offerClosed", { id, status: "cancelled" });
+      }
+    }
     this.inventories.delete(client.sessionId);
   }
 }
@@ -215,6 +322,28 @@ function tileAt(state: WorldState, x: number, y: number): number {
 }
 
 const SOLID = new Set([1, 3]); // water, tree
+
+function invHas(inv: any, item: string, count: number) {
+  return (inv[item] ?? 0) >= count;
+}
+function invAdd(inv: any, item: string, count: number) {
+  inv[item] = (inv[item] ?? 0) + count;
+}
+function invSub(inv: any, item: string, count: number) {
+  const left = (inv[item] ?? 0) - count;
+  if (left > 0) inv[item] = left;
+  else delete inv[item];
+}
+function normItem(o: any) {
+  if (!o) return null;
+  const item = String(o.item ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, "");
+  const count = Math.floor(Number(o.count));
+  if (!item || !Number.isFinite(count) || count < 1 || count > 100000)
+    return null;
+  return { item, count };
+}
 
 const clamp = (v: number, lo: number, hi: number) =>
   Math.max(lo, Math.min(hi, v));

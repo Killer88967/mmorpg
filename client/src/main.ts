@@ -1,4 +1,4 @@
-//@ts-nocheck
+// @ts-nocheck
 import "./style.css";
 import { Client, Callbacks } from "@colyseus/sdk";
 import { Application, Graphics, Container, Text } from "pixi.js";
@@ -62,6 +62,9 @@ async function main() {
 
   // ---- inventory panel (your own only) ----
   let myInventory = {};
+  const myName = name;
+  const offerLines = new Map();
+  let openOffers = 0;
 
   const invPanel = document.createElement("div");
   invPanel.className = "inv-panel";
@@ -172,6 +175,38 @@ async function main() {
           ? full
           : `{${item}::${myInventory[item.toLowerCase()] ?? 0}}`,
     );
+  }
+
+  function handleChatSend(text) {
+    if (text.toLowerCase().startsWith("/offer")) {
+      const parsed = parseOfferCommand(text);
+      if (parsed) room.send("offer", parsed);
+      else appendSystem("Usage: /offer <item> <count> for <item> <count>");
+      return;
+    }
+    room.send("chat", expandItemTokens(text));
+  }
+
+  function parseOfferCommand(text) {
+    const m = text.match(
+      /^\/offer\s+([a-z][a-z0-9_]*)\s+(\d+)\s+(?:for\s+)?([a-z][a-z0-9_]*)\s+(\d+)\s*$/i,
+    );
+    if (!m) return null;
+    return {
+      give: { item: m[1].toLowerCase(), count: parseInt(m[2], 10) },
+      want: { item: m[3].toLowerCase(), count: parseInt(m[4], 10) },
+    };
+  }
+
+  function appendSystem(text) {
+    const line = document.createElement("div");
+    line.className = "chat-line chat-system";
+    line.textContent = text;
+    chatLog.appendChild(line);
+    while (chatLog.childNodes.length > 12)
+      chatLog.removeChild(chatLog.firstChild);
+    chatLog.scrollTop = chatLog.scrollHeight;
+    showLog();
   }
 
   $.onAdd("players", (player, sessionId) => {
@@ -320,10 +355,11 @@ async function main() {
     clearTimeout(fadeTimer);
     chatLog.classList.add("is-visible");
   }
+
   function scheduleFade() {
     clearTimeout(fadeTimer);
     fadeTimer = setTimeout(() => {
-      if (!chatOpen) chatLog.classList.remove("is-visible");
+      if (!chatOpen && openOffers === 0) chatLog.classList.remove("is-visible");
     }, 5000);
   }
 
@@ -361,7 +397,7 @@ async function main() {
     e.stopPropagation();
     if (e.key === "Enter") {
       const text = chatInput.value.trim();
-      if (text) room.send("chat", expandItemTokens(text));
+      if (text) handleChatSend(text); // was: room.send("chat", expandItemTokens(text));
       closeChat();
     } else if (e.key === "Escape") {
       closeChat();
@@ -373,6 +409,60 @@ async function main() {
     showLog();
     if (!chatOpen) scheduleFade();
   });
+
+  room.onMessage("offerPosted", ({ id, fromName, give, want }) => {
+    const line = document.createElement("div");
+    line.className = "chat-line chat-offer";
+    const who = document.createElement("span");
+    who.className = "chat-name";
+    who.textContent = fromName + " offers ";
+    line.append(who, makeItemChip(give.item, give.count));
+    line.append(document.createTextNode(" for "));
+    line.append(makeItemChip(want.item, want.count));
+
+    const btn = document.createElement("button");
+    btn.className = "offer-btn";
+    if (fromName === myName) {
+      btn.textContent = "Cancel";
+      btn.classList.add("is-cancel");
+      btn.onclick = () => room.send("cancelOffer", { id });
+    } else {
+      btn.textContent = "Accept";
+      btn.onclick = () => room.send("accept", { id });
+    }
+    line.append(btn);
+
+    chatLog.appendChild(line);
+    offerLines.set(id, line);
+    openOffers++;
+    while (chatLog.childNodes.length > 12)
+      chatLog.removeChild(chatLog.firstChild);
+    chatLog.scrollTop = chatLog.scrollHeight;
+    showLog();
+  });
+
+  room.onMessage("offerClosed", ({ id, status, by }) => {
+    const line = offerLines.get(id);
+    openOffers = Math.max(0, openOffers - 1);
+    if (line) {
+      line.querySelector(".offer-btn")?.remove();
+      const tag = document.createElement("span");
+      tag.className = "offer-status";
+      tag.textContent =
+        status === "completed"
+          ? `  ✓ traded${by ? " with " + by : ""}`
+          : status === "expired"
+            ? "  — expired"
+            : "  — cancelled";
+      line.append(tag);
+      line.classList.add("is-closed");
+      offerLines.delete(id);
+    }
+    if (openOffers === 0) scheduleFade();
+    showLog();
+  });
+
+  room.onMessage("offerError", (text) => appendSystem(text));
 
   // ---- keyboard: Enter opens chat, E harvests, WASD moves (only when chat closed) ----
   addEventListener("keydown", (e) => {

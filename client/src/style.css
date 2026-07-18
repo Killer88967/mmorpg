@@ -63,6 +63,47 @@ canvas {
   display: block;
 }
 
+.chat-system {
+  color: #f0c674;
+  font-style: italic;
+}
+.chat-offer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.chat-offer.is-closed {
+  opacity: 0.55;
+}
+.offer-btn {
+  pointer-events: auto;
+  margin-left: 6px;
+  padding: 3px 12px;
+  font:
+    600 12px system-ui,
+    sans-serif;
+  color: #fff;
+  background: #2e7d32;
+  border: 1px solid #3ba33f;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.offer-btn:hover {
+  background: #379a3b;
+}
+.offer-btn.is-cancel {
+  background: #7d2e2e;
+  border-color: #a33b3b;
+}
+.offer-btn.is-cancel:hover {
+  background: #9a3737;
+}
+.offer-status {
+  color: #8a93a3;
+  font-size: 12px;
+}
+
 /* --- chat item links --- */
 .chat-item {
   display: inline-flex;
