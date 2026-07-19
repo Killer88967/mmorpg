@@ -19,7 +19,7 @@ export function initInventory(ctx) {
         ? entries
             .map(
               ([item, n]) =>
-                `<div class="inv-item"><span class="inv-name">${item}</span><span class="inv-count">${formatAmount(n)}</span></div>`,
+                `<div class="inv-item" title="${n.toLocaleString("es-US")}"><span class="inv-name">${item}</span><span class="inv-count">${formatAmount(n)}</span></div>`,
             )
             .join("")
         : `<div class="inv-empty">empty</div>`);
@@ -68,6 +68,7 @@ export function initInventory(ctx) {
       slot.className = "inv-slot";
       slot.dataset.item = item;
       slot.style.setProperty("--item-color", def.color);
+      slot.title = `${def.name} — ${n.toLocaleString("en-US")}`;
       slot.innerHTML =
         `<span class="inv-slot-icon">${def.icon}</span>` +
         `<span class="inv-slot-count">${formatAmount(n)}</span>` +
