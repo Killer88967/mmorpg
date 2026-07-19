@@ -12,7 +12,11 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "useDefineForClassFields": false,
-    "types": ["node"]
+    "types": ["node"],
+
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["src", "test", "prisma.config.ts"]
 }

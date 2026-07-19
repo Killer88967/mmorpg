@@ -1,0 +1,55 @@
+// @ts-nocheck
+import type { Items } from "../types";
+
+// ---- item database: what each item IS (drives chips + tooltips) ----
+export const ITEM_DB: Items = {
+  stick: {
+    name: "Stick",
+    icon: "🌿",
+    color: "#a1794b",
+    rarity: "common",
+    type: "Material",
+    desc: "A slender branch. Basic crafting fodder.",
+  },
+  flint: {
+    name: "Flint",
+    icon: "🔻",
+    color: "#5b5b52",
+    rarity: "common",
+    type: "Material",
+    desc: "A sharp shard of stone. The start of every tool.",
+  },
+  wood: {
+    name: "Wood",
+    icon: "🪵",
+    color: "#b08968",
+    rarity: "common",
+    type: "Material",
+    desc: "A sturdy log. Useful for building and crafting.",
+  },
+  stone: {
+    name: "Stone",
+    icon: "🪨",
+    color: "#9aa3ad",
+    rarity: "common",
+    type: "Material",
+    desc: "Rough rock — the backbone of any structure.",
+  },
+  ore: {
+    name: "Iron Ore",
+    icon: "⛏️",
+    color: "#e0a458",
+    rarity: "uncommon",
+    type: "Material",
+    desc: "Raw iron, ready to be smelted.",
+  },
+  sword: {
+    name: "Iron Sword",
+    icon: "🗡️",
+    color: "#cfd8e3",
+    rarity: "uncommon",
+    type: "Weapon",
+    stats: { Damage: 12, "Attack Speed": "1.4/s", Reach: "1 tile" },
+    desc: "A dependable blade. Nothing fancy, but it gets the job done.",
+  },
+};

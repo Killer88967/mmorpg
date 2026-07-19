@@ -11,7 +11,7 @@ import { WebSocketTransport } from "@colyseus/ws-transport";
 /**
  * Import your Room files
  */
-import { WorldRoom } from "./rooms/WorldRoom.js";
+import { WorldRoom } from "@/rooms/WorldRoom.js";
 
 const server = defineServer({
   /**

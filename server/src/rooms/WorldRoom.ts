@@ -1,12 +1,12 @@
 import { Room, Client } from "colyseus";
-import { WorldState, Player } from "./schema/WorldState.js";
-import { prisma } from "../db.js";
-
-const TILE = 64;
-const COLS = 32;
-const ROWS = 32;
-const SPEED = 200; // px/sec
-const WORLD = { w: COLS * TILE, h: ROWS * TILE };
+import { WorldState, Player } from "@/rooms/schema/WorldState.js";
+import { prisma } from "@/db.js";
+import { TILE, SPEED, WORLD } from "@/game/constants.js";
+import { SOLID, TOOL_CAPS } from "@/game/resources.js";
+import { generateMap, tileAt, clamp, randomColor } from "@/game/map.js";
+import { registerHarvest } from "@/handlers/harvest.js";
+import { registerTrade } from "@/handlers/trade.js";
+import { registerDiscard } from "@/handlers/discard.js";
 
 type Input = { up: boolean; down: boolean; left: boolean; right: boolean };
 
@@ -15,50 +15,10 @@ export class WorldRoom extends Room {
   maxClients = 32;
 
   private inputs = new Map<string, Input>();
-  private inventories = new Map<string, Record<string, number>>();
+  inventories = new Map<string, Record<string, number>>();
   private tools = new Map<string, Set<string>>();
-  private offers = new Map<string, any>();
-  private offerSeq = 0;
-
-  private generateMap() {
-    const idx = (c: number, r: number) => r * COLS + c;
-    const tiles = new Array(COLS * ROWS).fill(0); // 0 = grass
-    for (
-      let r = 6;
-      r < 12;
-      r++ // 1 = water (a lake)
-    )
-      for (let c = 8; c < 15; c++) tiles[idx(c, r)] = 1;
-    for (let c = 0; c < COLS; c++) tiles[idx(c, 16)] = 2; // 2 = path (crossroads)
-    for (let r = 0; r < ROWS; r++) tiles[idx(16, r)] = 2;
-    for (
-      let r = 0;
-      r < ROWS;
-      r++ // 3 = tree, scattered
-    )
-      for (let c = 0; c < COLS; c++) {
-        if (tiles[idx(c, r)] !== 0) continue;
-        if ((Math.imul(c, 73856093) ^ Math.imul(r, 19349663)) % 11 === 0)
-          tiles[idx(c, r)] = 3;
-      }
-    const rhash = (c: number, r: number, s: number) =>
-      (Math.imul(c ^ s, 73856093) ^ Math.imul(r ^ s, 19349663)) >>> 0;
-    for (let r = 0; r < ROWS; r++)
-      for (let c = 0; c < COLS; c++) {
-        if (tiles[idx(c, r)] !== 0) continue; // only replace grass
-        if (rhash(c, r, 101) % 13 === 0)
-          tiles[idx(c, r)] = 4; // rock
-        else if (rhash(c, r, 202) % 47 === 0)
-          tiles[idx(c, r)] = 5; // ore
-        else if (rhash(c, r, 303) % 9 === 0)
-          tiles[idx(c, r)] = 6; // bush
-        else if (rhash(c, r, 404) % 19 === 0) tiles[idx(c, r)] = 7; // flint
-      }
-    this.state.cols = COLS;
-    this.state.rows = ROWS;
-    this.state.tile = TILE;
-    this.state.tiles.push(...tiles);
-  }
+  offers = new Map<string, any>();
+  offerSeq = 0;
 
   private async saveAll() {
     for (const [id, player] of this.state.players) {
@@ -77,13 +37,13 @@ export class WorldRoom extends Room {
     }
   }
 
-  private async saveOne(name: string, inv: any) {
+  async saveOne(name: string, inv: any) {
     await prisma.character
       .update({ where: { name }, data: { inventory: JSON.stringify(inv) } })
       .catch(() => {});
   }
 
-  private playerCaps(sessionId: string): Set<string> {
+  playerCaps(sessionId: string): Set<string> {
     const caps = new Set<string>();
     for (const t of this.tools.get(sessionId) ?? []) {
       for (const cap of TOOL_CAPS[t] ?? []) caps.add(cap);
@@ -102,7 +62,7 @@ export class WorldRoom extends Room {
   }
 
   onCreate() {
-    this.generateMap();
+    generateMap(this.state);
 
     this.onMessage("input", (client, data: Input) => {
       this.inputs.set(client.sessionId, {
@@ -140,170 +100,9 @@ export class WorldRoom extends Room {
       client.send("inventory", this.inventories.get(client.sessionId) ?? {});
     });
 
-    // harvesting materials
-    this.onMessage("harvest", (client) => {
-      const player = this.state.players.get(client.sessionId);
-      if (!player) return;
-      const pc = Math.floor(player.x / TILE);
-      const pr = Math.floor(player.y / TILE);
-
-      // nearest harvestable tile in the 3x3 around the player
-      let best = -1,
-        bestType = -1,
-        bestDist = Infinity;
-      for (let dr = -1; dr <= 1; dr++)
-        for (let dc = -1; dc <= 1; dc++) {
-          const c = pc + dc,
-            r = pr + dr;
-          if (c < 0 || r < 0 || c >= COLS || r >= ROWS) continue;
-          const i = r * COLS + c;
-          if (!RESOURCES[this.state.tiles[i]]) continue;
-          const cx = c * TILE + TILE / 2,
-            cy = r * TILE + TILE / 2;
-          const d = (cx - player.x) ** 2 + (cy - player.y) ** 2;
-          if (d < bestDist) {
-            bestDist = d;
-            best = i;
-            bestType = this.state.tiles[i];
-          }
-        }
-      if (best < 0) return; // nothing in range
-
-      const res = RESOURCES[bestType];
-      if (
-        res.requires &&
-        !this.playerCaps(client.sessionId).has(res.requires)
-      ) {
-        client.send(
-          "notice",
-          `You need ${REQ_LABEL[res.requires]} to harvest ${res.drop}.`,
-        );
-        return;
-      }
-
-      // deplete, grant drop, respawn to the original resource type
-      this.state.tiles[best] = 0;
-      this.broadcast("tileUpdate", { index: best, type: 0 });
-
-      const inv = this.inventories.get(client.sessionId) ?? {};
-      inv[res.drop] = (inv[res.drop] ?? 0) + 1;
-      this.inventories.set(client.sessionId, inv);
-      client.send("inventory", inv);
-
-      this.clock.setTimeout(() => {
-        this.state.tiles[best] = bestType;
-        this.broadcast("tileUpdate", { index: best, type: bestType });
-      }, res.respawn);
-    });
-
-    // post a trade offer to the whole server
-    this.onMessage("offer", (client, data) => {
-      const player = this.state.players.get(client.sessionId);
-      if (!player) return;
-      const give = normItem(data?.give);
-      const want = data?.want ? normItem(data?.want) : null; // no want = free gift
-      if (!give) return;
-      if (data?.want && !want) return; // want was specified but invalid
-
-      const inv = this.inventories.get(client.sessionId) ?? {};
-      if (!invHas(inv, give.item, give.count)) {
-        client.send("offerError", `You don't have ${give.count} ${give.item}.`);
-        return;
-      }
-
-      const id = "o" + ++this.offerSeq;
-      this.offers.set(id, {
-        id,
-        fromId: client.sessionId,
-        fromName: player.name,
-        give,
-        want,
-      });
-      this.broadcast("offerPosted", { id, fromName: player.name, give, want });
-
-      this.clock.setTimeout(() => {
-        if (this.offers.delete(id))
-          this.broadcast("offerClosed", { id, status: "expired" });
-      }, 120000);
-    });
-
-    // accept someone's offer — re-validates BOTH sides, then swaps atomically
-    this.onMessage("accept", (client, data) => {
-      const offer = this.offers.get(data?.id);
-      if (!offer) {
-        client.send("offerError", "That offer is no longer available.");
-        return;
-      }
-      if (offer.fromId === client.sessionId) return;
-
-      const sellerInv = this.inventories.get(offer.fromId);
-      const buyerInv = this.inventories.get(client.sessionId);
-      if (!sellerInv || !buyerInv) {
-        this.offers.delete(offer.id);
-        this.broadcast("offerClosed", { id: offer.id, status: "cancelled" });
-        client.send("offerError", "That offer is no longer available.");
-        return;
-      }
-      if (!invHas(sellerInv, offer.give.item, offer.give.count)) {
-        this.offers.delete(offer.id);
-        this.broadcast("offerClosed", { id: offer.id, status: "cancelled" });
-        client.send("offerError", "The offerer no longer has the goods.");
-        return;
-      }
-      if (offer.want && !invHas(buyerInv, offer.want.item, offer.want.count)) {
-        client.send(
-          "offerError",
-          `You don't have ${offer.want.count} ${offer.want.item}.`,
-        );
-        return;
-      }
-
-      // atomic swap (synchronous — no await between check and mutation)
-      invSub(sellerInv, offer.give.item, offer.give.count);
-      invAdd(buyerInv, offer.give.item, offer.give.count);
-      if (offer.want) {
-        invSub(buyerInv, offer.want.item, offer.want.count);
-        invAdd(sellerInv, offer.want.item, offer.want.count);
-      }
-      this.offers.delete(offer.id);
-
-      const buyerName =
-        this.state.players.get(client.sessionId)?.name ?? "someone";
-      client.send("inventory", buyerInv);
-      this.clients
-        .find((c) => c.sessionId === offer.fromId)
-        ?.send("inventory", sellerInv);
-      this.broadcast("offerClosed", {
-        id: offer.id,
-        status: "completed",
-        by: buyerName,
-      });
-
-      this.saveOne(offer.fromName, sellerInv);
-      this.saveOne(buyerName, buyerInv);
-    });
-
-    // cancel your own offer
-    this.onMessage("cancelOffer", (client, data) => {
-      const offer = this.offers.get(data?.id);
-      if (!offer || offer.fromId !== client.sessionId) return;
-      this.offers.delete(offer.id);
-      this.broadcast("offerClosed", { id: offer.id, status: "cancelled" });
-    });
-
-    // discard items
-    this.onMessage("discard", (client, data) => {
-      const item = String(data?.item ?? "")
-        .toLowerCase()
-        .replace(/[^a-z0-9_]/g, "");
-      let count = Math.floor(Number(data?.count));
-      const inv = this.inventories.get(client.sessionId);
-      if (!inv || !item || !Number.isFinite(count) || count < 1) return;
-      const have = inv[item] ?? 0;
-      if (have <= 0) return;
-      invSub(inv, item, Math.min(count, have));
-      client.send("inventory", inv);
-    });
+    registerHarvest(this);
+    registerTrade(this);
+    registerDiscard(this);
 
     // fixed simulation tick — 30fps
     this.setSimulationInterval((dt) => this.update(dt), 1000 / 30);
@@ -397,68 +196,3 @@ export class WorldRoom extends Room {
     this.inventories.delete(client.sessionId);
   }
 }
-
-function tileAt(state: WorldState, x: number, y: number): number {
-  const c = Math.floor(x / TILE);
-  const r = Math.floor(y / TILE);
-  if (c < 0 || r < 0 || c >= COLS || r >= ROWS) return 1; // treat out-of-bounds as solid
-  return state.tiles[r * COLS + c];
-}
-
-const SOLID = new Set([1, 3, 4, 5]); // water, tree, rock, ore
-
-// each harvestable tile: what it drops, the capability it needs (null = hands), respawn ms
-const RESOURCES: Record<
-  number,
-  { drop: string; requires: string | null; respawn: number }
-> = {
-  3: { drop: "wood", requires: "chop", respawn: 10000 },
-  4: { drop: "stone", requires: "mine", respawn: 20000 },
-  5: { drop: "ore", requires: "mine2", respawn: 30000 },
-  6: { drop: "stick", requires: null, respawn: 15000 },
-  7: { drop: "flint", requires: null, respawn: 20000 },
-};
-
-// tools are permanent unlocks; each grants capabilities
-const TOOL_CAPS: Record<string, string[]> = {
-  flint_hatchet: ["chop"],
-  flint_pickaxe: ["mine"],
-  stone_hatchet: ["chop"],
-  stone_pickaxe: ["mine", "mine2"],
-};
-
-const REQ_LABEL: Record<string, string> = {
-  chop: "a hatchet",
-  mine: "a pickaxe",
-  mine2: "a stone pickaxe",
-};
-
-function invHas(inv: any, item: string, count: number) {
-  return (inv[item] ?? 0) >= count;
-}
-function invAdd(inv: any, item: string, count: number) {
-  inv[item] = (inv[item] ?? 0) + count;
-}
-function invSub(inv: any, item: string, count: number) {
-  const left = (inv[item] ?? 0) - count;
-  if (left > 0) inv[item] = left;
-  else delete inv[item];
-}
-function normItem(o: any) {
-  if (!o) return null;
-  const item = String(o.item ?? "")
-    .toLowerCase()
-    .replace(/[^a-z0-9_]/g, "");
-  const count = Math.floor(Number(o.count));
-  if (!item || !Number.isFinite(count) || count < 1 || count > 100000)
-    return null;
-  return { item, count };
-}
-
-const clamp = (v: number, lo: number, hi: number) =>
-  Math.max(lo, Math.min(hi, v));
-const randomColor = () =>
-  "#" +
-  Math.floor(Math.random() * 0xffffff)
-    .toString(16)
-    .padStart(6, "0");
