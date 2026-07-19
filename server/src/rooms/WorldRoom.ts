@@ -16,6 +16,7 @@ export class WorldRoom extends Room {
 
   private inputs = new Map<string, Input>();
   private inventories = new Map<string, Record<string, number>>();
+  private tools = new Map<string, Set<string>>();
   private offers = new Map<string, any>();
   private offerSeq = 0;
 
@@ -40,6 +41,19 @@ export class WorldRoom extends Room {
         if ((Math.imul(c, 73856093) ^ Math.imul(r, 19349663)) % 11 === 0)
           tiles[idx(c, r)] = 3;
       }
+    const rhash = (c: number, r: number, s: number) =>
+      (Math.imul(c ^ s, 73856093) ^ Math.imul(r ^ s, 19349663)) >>> 0;
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++) {
+        if (tiles[idx(c, r)] !== 0) continue; // only replace grass
+        if (rhash(c, r, 101) % 13 === 0)
+          tiles[idx(c, r)] = 4; // rock
+        else if (rhash(c, r, 202) % 47 === 0)
+          tiles[idx(c, r)] = 5; // ore
+        else if (rhash(c, r, 303) % 9 === 0)
+          tiles[idx(c, r)] = 6; // bush
+        else if (rhash(c, r, 404) % 19 === 0) tiles[idx(c, r)] = 7; // flint
+      }
     this.state.cols = COLS;
     this.state.rows = ROWS;
     this.state.tile = TILE;
@@ -52,7 +66,12 @@ export class WorldRoom extends Room {
       await prisma.character
         .update({
           where: { name: player.name },
-          data: { x: player.x, y: player.y, inventory: JSON.stringify(inv) },
+          data: {
+            x: player.x,
+            y: player.y,
+            inventory: JSON.stringify(inv),
+            tools: JSON.stringify([...(this.tools.get(id) ?? [])]),
+          },
         })
         .catch(() => {});
     }
@@ -62,6 +81,14 @@ export class WorldRoom extends Room {
     await prisma.character
       .update({ where: { name }, data: { inventory: JSON.stringify(inv) } })
       .catch(() => {});
+  }
+
+  private playerCaps(sessionId: string): Set<string> {
+    const caps = new Set<string>();
+    for (const t of this.tools.get(sessionId) ?? []) {
+      for (const cap of TOOL_CAPS[t] ?? []) caps.add(cap);
+    }
+    return caps;
   }
 
   private randomSpawn(): { x: number; y: number } {
@@ -90,6 +117,21 @@ export class WorldRoom extends Room {
       const player = this.state.players.get(client.sessionId);
       const clean = String(text).slice(0, 200).trim();
       if (!clean) return;
+
+      // TEMP dev command to test tool-gating before crafting exists — remove later
+      if (clean.startsWith("/tool ")) {
+        const t = clean.slice(6).trim();
+        if (!TOOL_CAPS[t]) {
+          client.send("notice", `Unknown tool: ${t}`);
+          return;
+        }
+        const set = this.tools.get(client.sessionId) ?? new Set<string>();
+        set.add(t);
+        this.tools.set(client.sessionId, set);
+        client.send("notice", `Granted ${t} (dev).`);
+        return;
+      }
+
       this.broadcast("chat", { name: player?.name || "Anon", text: clean });
     });
 
@@ -98,15 +140,16 @@ export class WorldRoom extends Room {
       client.send("inventory", this.inventories.get(client.sessionId) ?? {});
     });
 
-    // chop a nearby tree
+    // harvesting materials
     this.onMessage("harvest", (client) => {
       const player = this.state.players.get(client.sessionId);
       if (!player) return;
       const pc = Math.floor(player.x / TILE);
       const pr = Math.floor(player.y / TILE);
 
-      // find the closest tree tile in the 3x3 around the player
+      // nearest harvestable tile in the 3x3 around the player
       let best = -1,
+        bestType = -1,
         bestDist = Infinity;
       for (let dr = -1; dr <= 1; dr++)
         for (let dc = -1; dc <= 1; dc++) {
@@ -114,31 +157,43 @@ export class WorldRoom extends Room {
             r = pr + dr;
           if (c < 0 || r < 0 || c >= COLS || r >= ROWS) continue;
           const i = r * COLS + c;
-          if (this.state.tiles[i] !== 3) continue;
+          if (!RESOURCES[this.state.tiles[i]]) continue;
           const cx = c * TILE + TILE / 2,
             cy = r * TILE + TILE / 2;
           const d = (cx - player.x) ** 2 + (cy - player.y) ** 2;
           if (d < bestDist) {
             bestDist = d;
             best = i;
+            bestType = this.state.tiles[i];
           }
         }
-      if (best < 0) return; // no tree in range
+      if (best < 0) return; // nothing in range
 
-      // remove it (turns walkable), grant wood, tell everyone the tile changed
+      const res = RESOURCES[bestType];
+      if (
+        res.requires &&
+        !this.playerCaps(client.sessionId).has(res.requires)
+      ) {
+        client.send(
+          "notice",
+          `You need ${REQ_LABEL[res.requires]} to harvest ${res.drop}.`,
+        );
+        return;
+      }
+
+      // deplete, grant drop, respawn to the original resource type
       this.state.tiles[best] = 0;
       this.broadcast("tileUpdate", { index: best, type: 0 });
 
       const inv = this.inventories.get(client.sessionId) ?? {};
-      inv.wood = (inv.wood ?? 0) + 1;
+      inv[res.drop] = (inv[res.drop] ?? 0) + 1;
       this.inventories.set(client.sessionId, inv);
       client.send("inventory", inv);
 
-      // respawn the tree after 10s
       this.clock.setTimeout(() => {
-        this.state.tiles[best] = 3;
-        this.broadcast("tileUpdate", { index: best, type: 3 });
-      }, 10000);
+        this.state.tiles[best] = bestType;
+        this.broadcast("tileUpdate", { index: best, type: bestType });
+      }, res.respawn);
     });
 
     // post a trade offer to the whole server
@@ -298,6 +353,11 @@ export class WorldRoom extends Room {
     try {
       inv = JSON.parse(record.inventory || "{}");
     } catch {}
+    let toolset: string[] = [];
+    try {
+      toolset = JSON.parse(record.tools || "[]");
+    } catch {}
+    this.tools.set(client.sessionId, new Set(toolset));
     this.inventories.set(client.sessionId, inv);
     this.inputs.set(client.sessionId, {
       up: false,
@@ -314,7 +374,14 @@ export class WorldRoom extends Room {
       await prisma.character
         .update({
           where: { name: player.name },
-          data: { x: player.x, y: player.y, inventory: JSON.stringify(inv) },
+          data: {
+            x: player.x,
+            y: player.y,
+            inventory: JSON.stringify(inv),
+            tools: JSON.stringify([
+              ...(this.tools.get(client.sessionId) ?? []),
+            ]),
+          },
         })
         .catch(() => {});
     }
@@ -326,6 +393,7 @@ export class WorldRoom extends Room {
         this.broadcast("offerClosed", { id, status: "cancelled" });
       }
     }
+    this.tools.delete(client.sessionId);
     this.inventories.delete(client.sessionId);
   }
 }
@@ -337,7 +405,33 @@ function tileAt(state: WorldState, x: number, y: number): number {
   return state.tiles[r * COLS + c];
 }
 
-const SOLID = new Set([1, 3]); // water, tree
+const SOLID = new Set([1, 3, 4, 5]); // water, tree, rock, ore
+
+// each harvestable tile: what it drops, the capability it needs (null = hands), respawn ms
+const RESOURCES: Record<
+  number,
+  { drop: string; requires: string | null; respawn: number }
+> = {
+  3: { drop: "wood", requires: "chop", respawn: 10000 },
+  4: { drop: "stone", requires: "mine", respawn: 20000 },
+  5: { drop: "ore", requires: "mine2", respawn: 30000 },
+  6: { drop: "stick", requires: null, respawn: 15000 },
+  7: { drop: "flint", requires: null, respawn: 20000 },
+};
+
+// tools are permanent unlocks; each grants capabilities
+const TOOL_CAPS: Record<string, string[]> = {
+  flint_hatchet: ["chop"],
+  flint_pickaxe: ["mine"],
+  stone_hatchet: ["chop"],
+  stone_pickaxe: ["mine", "mine2"],
+};
+
+const REQ_LABEL: Record<string, string> = {
+  chop: "a hatchet",
+  mine: "a pickaxe",
+  mine2: "a stone pickaxe",
+};
 
 function invHas(inv: any, item: string, count: number) {
   return (inv[item] ?? 0) >= count;

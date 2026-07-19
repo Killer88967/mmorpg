@@ -16,7 +16,16 @@ async function main() {
   const world = new Container();
   app.stage.addChild(world);
 
-  const COLORS = { 0: 0x2e7d32, 1: 0x1565c0, 2: 0xb08968, 3: 0x1b3a1b };
+  const COLORS = {
+    0: 0x2e7d32,
+    1: 0x1565c0,
+    2: 0xb08968,
+    3: 0x1b3a1b,
+    4: 0x6d7079,
+    5: 0x9c7a3c,
+    6: 0x4a9a4a,
+    7: 0x55564a,
+  };
   let localTiles = [];
   let mapMeta = { cols: 0, rows: 0, tile: 0 };
   let groundGfx = null;
@@ -91,8 +100,37 @@ async function main() {
   });
   room.send("ready"); // request our initial inventory
 
+  // ---- Types ----
+  type Item = {
+    name: string;
+    icon: string;
+    color: string;
+    rarity: "common" | "uncommon" | "rare" | "epic" | "legendary";
+    type: "Material" | "Tool" | "Weapon";
+    stats?: Record<string, string | number>;
+    desc: string;
+  };
+
+  type Items = Record<string, Item>;
+
   // ---- item database: what each item IS (drives chips + tooltips) ----
-  const ITEM_DB = {
+  const ITEM_DB: Items = {
+    stick: {
+      name: "Stick",
+      icon: "🌿",
+      color: "#a1794b",
+      rarity: "common",
+      type: "Material",
+      desc: "A slender branch. Basic crafting fodder.",
+    },
+    flint: {
+      name: "Flint",
+      icon: "🔻",
+      color: "#5b5b52",
+      rarity: "common",
+      type: "Material",
+      desc: "A sharp shard of stone. The start of every tool.",
+    },
     wood: {
       name: "Wood",
       icon: "🪵",
@@ -752,6 +790,8 @@ async function main() {
   });
 
   room.onMessage("offerError", (text) => appendSystem(text));
+
+  room.onMessage("notice", (text) => appendSystem(text))
 
   // ---- keyboard: Enter opens chat, E harvests, WASD moves (only when chat closed) ----
   addEventListener("keydown", (e) => {

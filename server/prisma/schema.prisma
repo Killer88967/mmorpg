@@ -14,5 +14,6 @@ model Character {
   y         Float    @default(300)
   color     String   @default("#ffffff")
   inventory String   @default("{}")
+  tools     String   @default("[]")
   updatedAt DateTime @updatedAt
 }
