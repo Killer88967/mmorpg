@@ -3,7 +3,7 @@ import { invSub } from "@/game/inventory.js";
 
 export function registerDiscard(room: WorldRoom) {
   // discard items
-  room.onMessage("discard", (client, data) => {
+  room.onMessage("discard", (client, data: any) => {
     const item = String(data?.item ?? "")
       .toLowerCase()
       .replace(/[^a-z0-9_]/g, "");

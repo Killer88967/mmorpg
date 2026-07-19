@@ -15,8 +15,8 @@ export function initContextMenu(ctx) {
   const SLOT_ACTIONS = [
     { id: "link", label: "🔗 Link in chat" },
     { id: "trade", label: "💰 Trade" },
+    { id: "craft", label: "🔨 Craft" },
     { id: "discard", label: "🗑️ Discard", danger: true },
-    { id: "craft", label: "🔨 Craft", disabled: true },
   ];
 
   function openCtxMenu(item, x, y) {
@@ -58,6 +58,9 @@ export function initContextMenu(ctx) {
     } else if (id === "trade") {
       ctx.closeInv();
       ctx.openTradeModal(item);
+    } else if (id === "craft") {
+      ctx.closeInv();
+      ctx.openCrafting();
     } else if (id === "discard") {
       if (have > 0 && confirm(`Discard all ${have} ${def.name}?`))
         room.send("discard", { item, count: have });

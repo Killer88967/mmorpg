@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { ITEM_DB } from "@/data/items";
+import { formatAmount } from "@/util/format";
 
 // wires up chat + offer messages. Shares mutable state through `ctx`.
 export function initChat(ctx) {
@@ -24,7 +25,7 @@ export function initChat(ctx) {
     if (count != null) {
       const amt = document.createElement("span");
       amt.className = "chat-item-amt";
-      amt.textContent = "×" + count;
+      amt.textContent = "×" + formatAmount(count);
       chip.append(amt);
     }
     return chip;
@@ -220,7 +221,7 @@ export function initChat(ctx) {
 
   room.onMessage("offerError", (text) => appendSystem(text));
 
-  room.onMessage("notice", (text) => appendSystem(text))
+  room.onMessage("notice", (text) => appendSystem(text));
 
   // expose the bits other modules need
   ctx.chatLog = chatLog;

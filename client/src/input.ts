@@ -33,6 +33,14 @@ export function initInput(ctx) {
       ctx.closeCtxMenu();
       return;
     }
+    if (e.code === "Escape" && ctx.craftModalIsOpen?.()) {
+      ctx.closeCrafting();
+      return;
+    }
+    if (e.code === "KeyC") {
+      ctx.craftModalIsOpen?.() ? ctx.closeCrafting() : ctx.openCrafting();
+      return;
+    }
     if (e.code === "Escape" && ctx.invOpen) {
       ctx.closeInv();
       return;

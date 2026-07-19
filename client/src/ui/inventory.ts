@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { ITEM_DB } from "@/data/items";
+import { formatAmount } from "@/util/format";
 
 // inventory side-panel + full-screen bag modal. Shared state via `ctx`.
 export function initInventory(ctx) {
@@ -18,7 +19,7 @@ export function initInventory(ctx) {
         ? entries
             .map(
               ([item, n]) =>
-                `<div class="inv-item"><span class="inv-name">${item}</span><span class="inv-count">${n}</span></div>`,
+                `<div class="inv-item"><span class="inv-name">${item}</span><span class="inv-count">${formatAmount(n)}</span></div>`,
             )
             .join("")
         : `<div class="inv-empty">empty</div>`);
@@ -28,6 +29,7 @@ export function initInventory(ctx) {
     ctx.myInventory = inv;
     renderInventory(inv);
     if (ctx.invOpen) renderInvGrid();
+    ctx.refreshCrafting?.();
   });
   room.send("ready"); // request our initial inventory
 
@@ -68,7 +70,7 @@ export function initInventory(ctx) {
       slot.style.setProperty("--item-color", def.color);
       slot.innerHTML =
         `<span class="inv-slot-icon">${def.icon}</span>` +
-        `<span class="inv-slot-count">${n}</span>` +
+        `<span class="inv-slot-count">${formatAmount(n)}</span>` +
         `<span class="inv-slot-name">${def.name}</span>`;
       invGrid.append(slot);
     }

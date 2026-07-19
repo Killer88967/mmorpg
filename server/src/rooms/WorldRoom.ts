@@ -7,6 +7,7 @@ import { generateMap, tileAt, clamp, randomColor } from "@/game/map.js";
 import { registerHarvest } from "@/handlers/harvest.js";
 import { registerTrade } from "@/handlers/trade.js";
 import { registerDiscard } from "@/handlers/discard.js";
+import { registerCraft } from "@/handlers/craft.js";
 
 type Input = { up: boolean; down: boolean; left: boolean; right: boolean };
 
@@ -16,7 +17,7 @@ export class WorldRoom extends Room {
 
   private inputs = new Map<string, Input>();
   inventories = new Map<string, Record<string, number>>();
-  private tools = new Map<string, Set<string>>();
+  tools = new Map<string, Set<string>>();
   offers = new Map<string, any>();
   offerSeq = 0;
 
@@ -40,6 +41,20 @@ export class WorldRoom extends Room {
   async saveOne(name: string, inv: any) {
     await prisma.character
       .update({ where: { name }, data: { inventory: JSON.stringify(inv) } })
+      .catch(() => {});
+  }
+
+  async persist(sessionId: string) {
+    const player = this.state.players.get(sessionId);
+    if (!player) return;
+    await prisma.character
+      .update({
+        where: { name: player.name },
+        data: {
+          inventory: JSON.stringify(this.inventories.get(sessionId) ?? {}),
+          tools: JSON.stringify([...(this.tools.get(sessionId) ?? [])]),
+        },
+      })
       .catch(() => {});
   }
 
@@ -89,6 +104,7 @@ export class WorldRoom extends Room {
         set.add(t);
         this.tools.set(client.sessionId, set);
         client.send("notice", `Granted ${t} (dev).`);
+        client.send("toolsUpdate", [...set]);
         return;
       }
 
@@ -98,11 +114,13 @@ export class WorldRoom extends Room {
     // send a player their inventory once they're ready to receive it
     this.onMessage("ready", (client) => {
       client.send("inventory", this.inventories.get(client.sessionId) ?? {});
+      client.send("toolsUpdate", [...(this.tools.get(client.sessionId) ?? [])]);
     });
 
     registerHarvest(this);
     registerTrade(this);
     registerDiscard(this);
+    registerCraft(this);
 
     // fixed simulation tick — 30fps
     this.setSimulationInterval((dt) => this.update(dt), 1000 / 30);

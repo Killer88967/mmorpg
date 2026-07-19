@@ -3,7 +3,7 @@ import { invHas, invAdd, invSub, normItem } from "@/game/inventory.js";
 
 export function registerTrade(room: WorldRoom) {
   // post a trade offer to the whole server
-  room.onMessage("offer", (client, data) => {
+  room.onMessage("offer", (client, data: any) => {
     const player = room.state.players.get(client.sessionId);
     if (!player) return;
     const give = normItem(data?.give);

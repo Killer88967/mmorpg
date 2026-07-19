@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { Items } from "../types";
+import type { Items } from "@/types";
 
 // ---- item database: what each item IS (drives chips + tooltips) ----
 export const ITEM_DB: Items = {
@@ -42,6 +42,42 @@ export const ITEM_DB: Items = {
     rarity: "uncommon",
     type: "Material",
     desc: "Raw iron, ready to be smelted.",
+  },
+  flint_hatchet: {
+    name: "Flint Hatchet",
+    icon: "🪓",
+    color: "#a1794b",
+    rarity: "common",
+    type: "Tool",
+    stats: { Enables: "Chopping wood" },
+    desc: "Flint lashed to a stick. Crude, but it cuts.",
+  },
+  flint_pickaxe: {
+    name: "Flint Pickaxe",
+    icon: "⛏️",
+    color: "#8a8f98",
+    rarity: "common",
+    type: "Tool",
+    stats: { Enables: "Mining stone" },
+    desc: "Barely a pickaxe, but it cracks rock.",
+  },
+  stone_hatchet: {
+    name: "Stone Hatchet",
+    icon: "🪓",
+    color: "#9aa3ad",
+    rarity: "uncommon",
+    type: "Tool",
+    stats: { Enables: "Chopping wood" },
+    desc: "Sturdier than flint, and faster.",
+  },
+  stone_pickaxe: {
+    name: "Stone Pickaxe",
+    icon: "⛏️",
+    color: "#9aa3ad",
+    rarity: "uncommon",
+    type: "Tool",
+    stats: { Enables: "Mining stone & ore" },
+    desc: "Hard enough to bite into iron ore.",
   },
   sword: {
     name: "Iron Sword",

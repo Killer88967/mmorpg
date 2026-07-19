@@ -1,15 +1,15 @@
-function invHas(inv: any, item: string, count: number) {
+export function invHas(inv: any, item: string, count: number) {
   return (inv[item] ?? 0) >= count;
 }
-function invAdd(inv: any, item: string, count: number) {
+export function invAdd(inv: any, item: string, count: number) {
   inv[item] = (inv[item] ?? 0) + count;
 }
-function invSub(inv: any, item: string, count: number) {
+export function invSub(inv: any, item: string, count: number) {
   const left = (inv[item] ?? 0) - count;
   if (left > 0) inv[item] = left;
   else delete inv[item];
 }
-function normItem(o: any) {
+export function normItem(o: any) {
   if (!o) return null;
   const item = String(o.item ?? "")
     .toLowerCase()
@@ -19,5 +19,3 @@ function normItem(o: any) {
     return null;
   return { item, count };
 }
-
-export { invHas, invAdd, invSub, normItem };

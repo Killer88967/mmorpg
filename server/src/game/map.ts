@@ -1,7 +1,7 @@
 import { WorldState } from "@/rooms/schema/WorldState.js";
 import { TILE, COLS, ROWS } from "./constants.js";
 
-function generateMap(state: WorldState) {
+export function generateMap(state: WorldState) {
   const idx = (c: number, r: number) => r * COLS + c;
   const tiles = new Array(COLS * ROWS).fill(0); // 0 = grass
   for (
@@ -41,19 +41,17 @@ function generateMap(state: WorldState) {
   state.tiles.push(...tiles);
 }
 
-function tileAt(state: WorldState, x: number, y: number): number {
+export function tileAt(state: WorldState, x: number, y: number): number {
   const c = Math.floor(x / TILE);
   const r = Math.floor(y / TILE);
   if (c < 0 || r < 0 || c >= COLS || r >= ROWS) return 1; // treat out-of-bounds as solid
   return state.tiles[r * COLS + c];
 }
 
-const clamp = (v: number, lo: number, hi: number) =>
+export const clamp = (v: number, lo: number, hi: number) =>
   Math.max(lo, Math.min(hi, v));
-const randomColor = () =>
+export const randomColor = () =>
   "#" +
   Math.floor(Math.random() * 0xffffff)
     .toString(16)
     .padStart(6, "0");
-
-export { generateMap, tileAt, clamp, randomColor };

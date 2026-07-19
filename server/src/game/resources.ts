@@ -1,7 +1,7 @@
-const SOLID = new Set([1, 3, 4, 5]); // water, tree, rock, ore
+export const SOLID = new Set([1, 3, 4, 5]); // water, tree, rock, ore
 
 // each harvestable tile: what it drops, the capability it needs (null = hands), respawn ms
-const RESOURCES: Record<
+export const RESOURCES: Record<
   number,
   { drop: string; requires: string | null; respawn: number }
 > = {
@@ -13,17 +13,15 @@ const RESOURCES: Record<
 };
 
 // tools are permanent unlocks; each grants capabilities
-const TOOL_CAPS: Record<string, string[]> = {
+export const TOOL_CAPS: Record<string, string[]> = {
   flint_hatchet: ["chop"],
   flint_pickaxe: ["mine"],
   stone_hatchet: ["chop"],
   stone_pickaxe: ["mine", "mine2"],
 };
 
-const REQ_LABEL: Record<string, string> = {
+export const REQ_LABEL: Record<string, string> = {
   chop: "a hatchet",
   mine: "a pickaxe",
   mine2: "a stone pickaxe",
 };
-
-export { SOLID, RESOURCES, TOOL_CAPS, REQ_LABEL };

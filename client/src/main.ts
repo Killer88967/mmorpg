@@ -11,6 +11,7 @@ import { initTrade } from "@/ui/trade";
 import { initContextMenu } from "@/ui/contextMenu";
 import { initTooltip } from "@/ui/tooltip";
 import { initInput } from "@/input";
+import { initCrafting } from "@/ui/crafting";
 
 async function main() {
   const app = new Application();
@@ -44,6 +45,7 @@ async function main() {
   // ---- UI (order matters: later modules reference earlier ones' DOM) ----
   initChat(ctx);
   initInventory(ctx);
+  initCrafting(ctx)
   initTrade(ctx);
   initContextMenu(ctx);
   initTooltip(ctx);
