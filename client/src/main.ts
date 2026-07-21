@@ -10,8 +10,10 @@ import { initInventory } from "@/ui/inventory";
 import { initTrade } from "@/ui/trade";
 import { initContextMenu } from "@/ui/contextMenu";
 import { initTooltip } from "@/ui/tooltip";
-import { initInput } from "@/input";
 import { initCrafting } from "@/ui/crafting";
+import { initHud } from "@/ui/hud";
+import { initInput } from "@/input";
+import { initMobs } from "@/world/mobs";
 
 async function main() {
   const app = new Application();
@@ -45,11 +47,15 @@ async function main() {
   // ---- UI (order matters: later modules reference earlier ones' DOM) ----
   initChat(ctx);
   initInventory(ctx);
-  initCrafting(ctx)
+  initCrafting(ctx);
   initTrade(ctx);
   initContextMenu(ctx);
   initTooltip(ctx);
   initInput(ctx);
+  initHud(ctx);
+
+  // ---- Mob Init ----
+  initMobs({ app, world, room, $ });
 
   // ---- players ----
   $.onAdd("players", (player, sessionId) => {
@@ -69,6 +75,11 @@ async function main() {
 
     world.addChild(g);
     sprites.set(sessionId, g);
+
+    if (sessionId === room.sessionId) {
+      ctx.setHp?.(player.hp, player.maxHp);
+      $.listen(player, "hp", (v) => ctx.setHp?.(v, player.maxHp));
+    }
 
     $.listen(player, "x", (v) => (g.tx = v));
     $.listen(player, "y", (v) => (g.ty = v));

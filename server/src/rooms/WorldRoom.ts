@@ -8,6 +8,8 @@ import { registerHarvest } from "@/handlers/harvest.js";
 import { registerTrade } from "@/handlers/trade.js";
 import { registerDiscard } from "@/handlers/discard.js";
 import { registerCraft } from "@/handlers/craft.js";
+import { registerMobs } from "@/game/mobs.js";
+import { registerCombat } from "@/handlers/combat.js";
 
 type Input = { up: boolean; down: boolean; left: boolean; right: boolean };
 
@@ -16,6 +18,7 @@ export class WorldRoom extends Room {
   maxClients = 32;
 
   private inputs = new Map<string, Input>();
+  private lastDamaged = new Map<string, number>();
   inventories = new Map<string, Record<string, number>>();
   tools = new Map<string, Set<string>>();
   offers = new Map<string, any>();
@@ -42,6 +45,37 @@ export class WorldRoom extends Room {
     await prisma.character
       .update({ where: { name }, data: { inventory: JSON.stringify(inv) } })
       .catch(() => {});
+  }
+
+  damagePlayer(sessionId: string, amount: number) {
+    const player = this.state.players.get(sessionId);
+    if (!player || player.hp <= 0) return;
+    player.hp = Math.max(0, player.hp - amount);
+    this.lastDamaged.set(sessionId, Date.now());
+    const client = this.clients.find((c) => c.sessionId === sessionId);
+    client?.send("playerHit", { amount, hp: player.hp });
+    if (player.hp <= 0) this.killPlayer(sessionId);
+  }
+
+  killPlayer(sessionId: string) {
+    const player = this.state.players.get(sessionId);
+    if (!player) return;
+    const spawn = this.randomSpawn();
+    player.x = spawn.x;
+    player.y = spawn.y;
+    player.hp = player.maxHp;
+    this.lastDamaged.delete(sessionId);
+    const client = this.clients.find((c) => c.sessionId === sessionId);
+    client?.send("died", {});
+  }
+
+  private regen() {
+    const now = Date.now();
+    this.state.players.forEach((player, id) => {
+      if (player.hp <= 0 || player.hp >= player.maxHp) return;
+      if (now - (this.lastDamaged.get(id) ?? 0) < 5000) return;
+      player.hp = Math.min(player.maxHp, player.hp + 5);
+    });
   }
 
   async persist(sessionId: string) {
@@ -117,6 +151,8 @@ export class WorldRoom extends Room {
       client.send("toolsUpdate", [...(this.tools.get(client.sessionId) ?? [])]);
     });
 
+    registerMobs(this);
+    registerCombat(this);
     registerHarvest(this);
     registerTrade(this);
     registerDiscard(this);
@@ -125,6 +161,7 @@ export class WorldRoom extends Room {
     // fixed simulation tick — 30fps
     this.setSimulationInterval((dt) => this.update(dt), 1000 / 30);
     this.clock.setInterval(() => this.saveAll(), 15000);
+    this.clock.setInterval(() => this.regen(), 1000);
   }
 
   update(dtMs: number) {
@@ -210,6 +247,7 @@ export class WorldRoom extends Room {
         this.broadcast("offerClosed", { id, status: "cancelled" });
       }
     }
+    this.lastDamaged.delete(client.sessionId);
     this.tools.delete(client.sessionId);
     this.inventories.delete(client.sessionId);
   }

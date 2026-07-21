@@ -64,6 +64,6 @@ export const RECIPES: RecipeArray = [
     name: "Iron Sword",
     inputs: { stick: 1, iron_bar: 2 },
     station: "furnace",
-    output: { kind: "item", item: "sword", count: 1 },
+    output: { kind: "item", item: "iron_sword", count: 1 },
   },
 ];

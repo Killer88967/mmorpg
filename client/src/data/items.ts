@@ -43,6 +43,14 @@ export const ITEM_DB: Items = {
     type: "Material",
     desc: "Raw iron, ready to be smelted.",
   },
+  slime_gel: {
+    name: "Slime Gel",
+    icon: "🟢",
+    color: "#5fbf5f",
+    rarity: "common",
+    type: "Material",
+    desc: "Bouncy residue from a slain slime.",
+  },
   flint_hatchet: {
     name: "Flint Hatchet",
     icon: "🪓",
@@ -114,7 +122,7 @@ export const ITEM_DB: Items = {
     stats: { Enables: "Mining stone & ore" },
     desc: "Strong enough for anything you've dug up so far.",
   },
-  sword: {
+  iron_sword: {
     name: "Iron Sword",
     icon: "🗡️",
     color: "#cfd8e3",

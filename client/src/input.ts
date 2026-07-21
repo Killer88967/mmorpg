@@ -29,6 +29,11 @@ export function initInput(ctx) {
       room.send("harvest");
       return;
     }
+    if (e.code === "Space") {
+      e.preventDefault();
+      room.send("attack");
+      return;
+    }
     if (e.code === "Escape" && ctx.ctxMenu.classList.contains("is-open")) {
       ctx.closeCtxMenu();
       return;
