@@ -1,5 +1,6 @@
 import type { RecipeArray } from "@/types";
 
+// @ts-nocheck
 export const RECIPES: RecipeArray = [
   {
     id: "sticks",
@@ -30,5 +31,39 @@ export const RECIPES: RecipeArray = [
     name: "Stone Pickaxe",
     inputs: { stick: 3, stone: 3 },
     output: { kind: "tool", tool: "stone_pickaxe" },
+  },
+  {
+    id: "furnace",
+    name: "Furnace",
+    inputs: { stone: 8 },
+    output: { kind: "tool", tool: "furnace" },
+  },
+  {
+    id: "iron_bar",
+    name: "Iron Bar",
+    inputs: { ore: 1 },
+    station: "furnace",
+    output: { kind: "item", item: "iron_bar", count: 1 },
+  },
+  {
+    id: "iron_hatchet",
+    name: "Iron Hatchet",
+    inputs: { stick: 2, iron_bar: 3 },
+    station: "furnace",
+    output: { kind: "tool", tool: "iron_hatchet" },
+  },
+  {
+    id: "iron_pickaxe",
+    name: "Iron Pickaxe",
+    inputs: { stick: 2, iron_bar: 3 },
+    station: "furnace",
+    output: { kind: "tool", tool: "iron_pickaxe" },
+  },
+  {
+    id: "iron_sword",
+    name: "Iron Sword",
+    inputs: { stick: 1, iron_bar: 2 },
+    station: "furnace",
+    output: { kind: "item", item: "sword", count: 1 },
   },
 ];

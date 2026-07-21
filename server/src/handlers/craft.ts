@@ -16,6 +16,15 @@ export function registerCraft(room: WorldRoom) {
       return;
     }
 
+    // Check if they have the required station
+    if (recipe.station && !tools.has(recipe.station)) {
+      client.send(
+        "notice",
+        `You need a ${recipe.station} to craft ${recipe.name}.`,
+      );
+      return;
+    }
+
     // verify materials first
     for (const [item, count] of Object.entries(recipe.inputs)) {
       if (!invHas(inv, item, count)) {

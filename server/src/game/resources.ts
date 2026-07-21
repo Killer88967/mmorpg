@@ -18,6 +18,9 @@ export const TOOL_CAPS: Record<string, string[]> = {
   flint_pickaxe: ["mine"],
   stone_hatchet: ["chop"],
   stone_pickaxe: ["mine", "mine2"],
+  iron_hatchet: ["chop"],
+  iron_pickaxe: ["mine", "mine2"],
+  furnace: [],
 };
 
 export const REQ_LABEL: Record<string, string> = {

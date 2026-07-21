@@ -59,6 +59,7 @@ export function initCrafting(ctx) {
         (recipe.output.kind === "item" && recipe.output.count > 1
           ? ` ×${recipe.output.count}`
           : "") +
+        (recipe.station ? ` <span class="craft-station">🔥</span>` : "") +
         `</span>`;
       row.append(head);
 
@@ -74,11 +75,17 @@ export function initCrafting(ctx) {
       }
       row.append(costs);
 
+      const needsStation =
+        recipe.station && !ctx.myTools.includes(recipe.station);
       const btn = document.createElement("button");
       btn.className = "craft-do";
       if (owned(recipe)) {
         btn.textContent = "Owned";
         btn.disabled = true;
+      } else if (needsStation) {
+        btn.textContent = "Needs 🔥";
+        btn.disabled = true;
+        btn.title = `Requires a ${recipe.station}`;
       } else if (!canAfford(recipe)) {
         btn.textContent = "Craft";
         btn.disabled = true;

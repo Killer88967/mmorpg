@@ -19,7 +19,7 @@ export function initInventory(ctx) {
         ? entries
             .map(
               ([item, n]) =>
-                `<div class="inv-item" title="${n.toLocaleString("es-US")}"><span class="inv-name">${item}</span><span class="inv-count">${formatAmount(n)}</span></div>`,
+                `<div class="inv-item" title="${n.toLocaleString("es-US")}"><span class="inv-name">${ITEM_DB[item]?.name ?? item}</span><span class="inv-count">${formatAmount(n)}</span></div>`,
             )
             .join("")
         : `<div class="inv-empty">empty</div>`);

@@ -13,6 +13,7 @@ export type RecipeArray = {
   id: string;
   name: string;
   inputs: Record<string, number>;
+  station?: string | Record<string, number>;
   output:
     | {
         kind: "item";

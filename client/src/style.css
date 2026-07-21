@@ -706,3 +706,7 @@ canvas {
   color: #6b7280;
   cursor: default;
 }
+.craft-station {
+  font-size: 12px;
+  opacity: 0.85;
+}
