@@ -1,5 +1,111 @@
-I need to update this readme later.
+# MMORPG
 
-# ROADMAP
+A tiny browser-based multiplayer RPG sandbox. Players share a persistent tile world where they can walk around, chat, gather resources, craft tools, trade with each other, and watch slimes wander about.
 
-Mobs [ ]
+Built with an authoritative [Colyseus](https://colyseus.io/) server (state is simulated server-side and synced to clients) and a [PixiJS](https://pixijs.com/) client rendered on the web.
+
+## Features
+
+- **Real-time multiplayer** — up to 32 players per world room, with server-authoritative movement and collision.
+- **Persistent characters** — position, inventory, and unlocked tools are saved to SQLite (via Prisma) and restored when you rejoin under the same name.
+- **Gathering** — chop trees, mine rocks and ore, and pick up sticks and flint. Harvesting nodes respawn on a timer, and higher-tier nodes require the right tool.
+- **Crafting** — turn raw materials into sticks, hatchets, pickaxes, a furnace, iron bars, and an iron sword. Some recipes require a crafting station (the furnace).
+- **Tool gating** — resources are locked behind tool capabilities: bare hands, a hatchet (`chop`), a basic pickaxe (`mine`), or a stone/iron pickaxe (`mine2`).
+- **Player-to-player trading** — send and accept trade offers with other players in the world.
+- **Chat** — world-wide text chat.
+- **Wandering mobs** — slimes spawn and roam the map with simple wander AI.
+
+## Tech Stack
+
+| Layer  | Tech                                              |
+| ------ | ------------------------------------------------- |
+| Client | TypeScript, Vite, PixiJS, `@colyseus/sdk`         |
+| Server | TypeScript, Colyseus, Express, `@colyseus/schema` |
+| Data   | SQLite via Prisma (`better-sqlite3` adapter)      |
+
+## Project Structure
+
+```
+.
+├── client/                 # Vite + PixiJS front end
+│   └── src/
+│       ├── main.ts         # bootstraps the game
+│       ├── input.ts        # keyboard handling
+│       ├── net/            # Colyseus room connection
+│       ├── world/          # camera, map, mob rendering
+│       ├── ui/             # chat, inventory, crafting, trade, tooltips
+│       └── data/           # client-side item/recipe/mob definitions
+├── server/                 # Colyseus game server
+│   ├── prisma/             # schema + migrations
+│   └── src/
+│       ├── index.ts        # server entry point
+│       ├── rooms/          # WorldRoom + synced schema (WorldState)
+│       ├── game/           # map generation, resources, recipes, mobs, constants
+│       └── handlers/       # harvest, craft, trade, discard message handlers
+└── package.json            # root scripts (run client + server together)
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js **20.9+**
+
+### Install
+
+Dependencies live in each workspace, so install both:
+
+```bash
+cd server && npm install
+cd ../client && npm install
+```
+
+### Set up the database
+
+The server uses SQLite via Prisma. From the `server/` directory, apply the migrations:
+
+```bash
+cd server
+npx prisma migrate dev
+```
+
+### Run
+
+From the repo root, start the client and server together:
+
+```bash
+npm run dev
+```
+
+Or run them individually:
+
+```bash
+npm run server   # Colyseus server (tsx watch)
+npm run client   # Vite dev server
+```
+
+Then open the URL printed by Vite (typically http://localhost:5173) in your browser.
+
+## Controls
+
+| Key                      | Action                     |
+| ------------------------ | -------------------------- |
+| `W` `A` `S` `D` / arrows | Move                       |
+| `E`                      | Harvest the tile you're on |
+| `C`                      | Open / close crafting      |
+| `I` or `B`               | Open / close inventory     |
+| `Enter`                  | Open chat                  |
+| `Esc`                    | Close the active menu      |
+
+## World & Progression
+
+The map is a 32×32 tile grid containing grass, a lake, crossroad paths, trees, rocks, ore, bushes (sticks), and flint. A rough progression loop:
+
+1. Gather **wood** (trees) and **flint** by hand.
+2. Craft **sticks**, then a **flint hatchet** and **flint pickaxe**.
+3. Mine **stone**, craft **stone tools** and a **furnace**.
+4. Smelt **ore** into **iron bars**, then craft **iron tools** and an **iron sword**.
+
+## License
+
+See [LICENSE](LICENSE).
