@@ -13,6 +13,7 @@ import { initTooltip } from "@/ui/tooltip";
 import { initCrafting } from "@/ui/crafting";
 import { initHud } from "@/ui/hud";
 import { initBuild } from "@/ui/build";
+import { initChest } from "@/ui/chest";
 import { initInput } from "@/input";
 import { initMobs } from "@/world/mobs";
 import { initPlaced } from "@/world/placed";
@@ -60,6 +61,7 @@ async function main() {
   initInput(ctx);
   initHud(ctx);
   initBuild(ctx);
+  initChest(ctx);
 
   // ---- Mob Init ----
   initMobs({ app, world, room, $ });

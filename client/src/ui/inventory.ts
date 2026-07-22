@@ -31,6 +31,7 @@ export function initInventory(ctx) {
     if (ctx.invOpen) renderInvGrid();
     ctx.refreshCrafting?.();
     ctx.refreshBuild?.();
+    ctx.refreshChest?.();
   });
   room.send("ready"); // request our initial inventory
 

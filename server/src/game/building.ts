@@ -6,7 +6,7 @@ export const PLACE_RANGE = 3; // tiles (Chebyshev) from the player
 export const PLACEABLES: Record<string, { item: string }> = {
   wall: { item: "wall" },
   furnace: { item: "furnace" },
-  //  chest added in the next piece
+  chest: { item: "chest" },
 };
 
 // true if a player/mob can't move into this world position

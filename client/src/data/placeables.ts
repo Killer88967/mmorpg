@@ -13,4 +13,10 @@ export const PLACE_INFO: PlaceInfo = {
     icon: "🔥",
     color: 0xe0692f,
   },
+  chest: {
+    item: "chest",
+    name: "Chest",
+    icon: "📦",
+    color: 0x8a5a2b,
+  },
 };

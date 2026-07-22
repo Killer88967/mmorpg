@@ -11,6 +11,7 @@ import { registerCraft } from "@/handlers/craft.js";
 import { registerMobs } from "@/game/mobs.js";
 import { registerCombat } from "@/handlers/combat.js";
 import { registerBuilding } from "@/handlers/building.js";
+import { registerChest } from "@/handlers/chest.js";
 import { isBlocked } from "@/game/building.js";
 
 type Input = { up: boolean; down: boolean; left: boolean; right: boolean };
@@ -23,6 +24,7 @@ export class WorldRoom extends Room {
   private lastDamaged = new Map<string, number>();
   private _worldDirty = false;
   inventories = new Map<string, Record<string, number>>();
+  chests = new Map<number, Record<string, number>>();
   tools = new Map<string, Set<string>>();
   offers = new Map<string, any>();
   offerSeq = 0;
@@ -67,6 +69,11 @@ export class WorldRoom extends Room {
       p.owner = o.owner ?? "";
       this.state.placed.set(String(o.index), p);
     }
+    try {
+      const chestObj = JSON.parse(row.chests || "{}");
+      for (const [k, v] of Object.entries(chestObj))
+        this.chests.set(Number(k), v as any);
+    } catch {}
   }
 
   async saveWorld(): Promise<void> {
@@ -74,12 +81,15 @@ export class WorldRoom extends Room {
     this.state.placed.forEach((p) =>
       arr.push({ index: p.index, kind: p.kind, owner: p.owner }),
     );
+    const chestObj: any = {};
+    this.chests.forEach((items, index) => (chestObj[index] = items));
     const placed = JSON.stringify(arr);
+    const chests = JSON.stringify(chestObj);
     await prisma.worldData
       .upsert({
         where: { id: 1 },
-        update: { placed },
-        create: { id: 1, placed },
+        update: { placed, chests },
+        create: { id: 1, placed, chests },
       })
       .catch(() => {});
   }
@@ -206,6 +216,7 @@ export class WorldRoom extends Room {
     registerDiscard(this);
     registerCraft(this);
     registerBuilding(this);
+    registerChest(this);
 
     // fixed simulation tick — 30fps
     this.setSimulationInterval((dt) => this.update(dt), 1000 / 30);

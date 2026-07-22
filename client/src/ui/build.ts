@@ -5,6 +5,7 @@ import { PLACE_INFO } from "@/data/placeables";
 export function initBuild(ctx) {
   const { app, world, room } = ctx;
   let selected = null;
+  let breakMode = false;
   let hover = null;
 
   const bar = document.createElement("div");
@@ -24,12 +25,25 @@ export function initBuild(ctx) {
       btn.innerHTML = `<span>${info.icon}</span><span class="build-count">${have}</span>`;
       btn.title = info.name;
       btn.onclick = () => {
+        breakMode = false;
         selected = selected === kind ? null : have > 0 ? kind : null;
         renderBar();
         drawGhost();
       };
       bar.append(btn);
     }
+    const brk = document.createElement("button");
+    brk.className =
+      "build-slot build-break" + (breakMode ? " is-selected" : "");
+    brk.innerHTML = `<span>⛏️</span>`;
+    brk.title = "Break mode";
+    brk.onclick = () => {
+      breakMode = !breakMode;
+      selected = null;
+      renderBar();
+      drawGhost();
+    };
+    bar.append(brk);
   }
   ctx.refreshBuild = renderBar;
   renderBar();
@@ -80,9 +94,14 @@ export function initBuild(ctx) {
     const index = t.r * C() + t.c;
     if (selected) {
       room.send("place", { kind: selected, index });
-    } else {
-      const p = room.state.placed?.get(String(index));
-      if (p && p.owner === ctx.myName) room.send("break", { index });
+      return;
+    }
+    const p = room.state.placed?.get(String(index));
+    if (!p || p.owner !== ctx.myName) return;
+    if (breakMode) {
+      room.send("break", { index });
+    } else if (p.kind === "chest") {
+      ctx.openChest?.(index);
     }
   });
 }

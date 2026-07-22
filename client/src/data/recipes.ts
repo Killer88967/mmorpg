@@ -45,6 +45,12 @@ export const RECIPES: RecipeArray = [
     output: { kind: "item", item: "furnace", count: 1 },
   },
   {
+    id: "chest",
+    name: "Chest",
+    inputs: { wood: 8 },
+    output: { kind: "item", item: "chest", count: 1 },
+  },
+  {
     id: "iron_bar",
     name: "Iron Bar",
     inputs: { ore: 1 },

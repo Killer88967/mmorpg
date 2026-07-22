@@ -21,4 +21,5 @@ model Character {
 model WorldData {
   id     Int    @id @default(1)
   placed String @default("[]")
+  chests String @default("{}")
 }

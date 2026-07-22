@@ -104,6 +104,15 @@ export const ITEM_DB: Items = {
     stats: { Enables: "Smelting (stand near)" },
     desc: "Place it, then stand nearby to smelt ore into iron.",
   },
+  chest: {
+    name: "Chest",
+    icon: "📦",
+    color: "#8a5a2b",
+    rarity: "common",
+    type: "Station",
+    stats: { Enables: "Storage" },
+    desc: "Place it to stash items. Only you can open it.",
+  },
   wall: {
     name: "Stone Wall",
     icon: "🧱",

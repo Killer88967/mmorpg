@@ -831,3 +831,140 @@ canvas {
   color: #fff;
   text-shadow: 0 1px 2px #000;
 }
+
+/* --- build break toggle --- */
+.build-break.is-selected {
+  border-color: #e0692f;
+  box-shadow: 0 0 0 2px rgba(224, 105, 47, 0.5);
+}
+
+/* --- chest modal --- */
+.chest-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 47;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+.chest-modal.is-open {
+  display: flex;
+}
+.chest-box {
+  width: min(94vw, 520px);
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(16, 19, 26, 0.98);
+  border: 1px solid #3a4050;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+.chest-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #2a2f3a;
+}
+.chest-title {
+  font:
+    700 15px system-ui,
+    sans-serif;
+  color: #7fd1ff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.chest-qty {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.chest-qty button {
+  padding: 4px 10px;
+  font:
+    600 12px system-ui,
+    sans-serif;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid #3a4050;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.chest-qty button.is-selected {
+  color: #fff;
+  border-color: #7fd1ff;
+  background: rgba(127, 209, 255, 0.15);
+}
+.chest-close {
+  background: none;
+  border: none;
+  color: #8a93a3;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.chest-close:hover {
+  color: #fff;
+}
+.chest-cols {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  overflow: hidden;
+}
+.chest-side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.chest-label {
+  font:
+    600 11px system-ui,
+    sans-serif;
+  color: #8a93a3;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.chest-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  max-height: 52vh;
+}
+.chest-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #2a2f3a;
+  border-radius: 8px;
+  color: #e8edf3;
+  font:
+    13px system-ui,
+    sans-serif;
+  cursor: pointer;
+  text-align: left;
+}
+.chest-row:hover {
+  border-color: #7fd1ff;
+}
+.chest-name {
+  flex: 1;
+  text-transform: capitalize;
+}
+.chest-n {
+  font-weight: 700;
+}
+.chest-empty {
+  color: #8a93a3;
+  font:
+    italic 12px system-ui,
+    sans-serif;
+  padding: 8px;
+}

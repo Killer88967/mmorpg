@@ -66,6 +66,14 @@ export function registerBuilding(room: WorldRoom) {
     if (def) {
       const inv = room.inventories.get(client.sessionId) ?? {};
       inv[def.item] = (inv[def.item] ?? 0) + 1;
+      if (placed.kind === "chest") {
+        const chest = room.chests.get(index);
+        if (chest) {
+          for (const [it, n] of Object.entries(chest))
+            inv[it] = (inv[it] ?? 0) + n;
+          room.chests.delete(index);
+        }
+      }
       room.inventories.set(client.sessionId, inv);
       client.send("inventory", inv);
       room.persist(client.sessionId);
