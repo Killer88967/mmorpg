@@ -1,11 +1,15 @@
 import type { WorldRoom } from "@/rooms/WorldRoom.js";
 import { RECIPE_BY_ID } from "@/game/recipes.js";
 import { invHas, invSub } from "@/game/inventory.js";
+import { nearStation } from "@/game/building.js";
 
 export function registerCraft(room: WorldRoom) {
   room.onMessage("craft", (client, data: any) => {
     const recipe = RECIPE_BY_ID[String(data?.id ?? "")];
     if (!recipe) return;
+
+    const player = room.state.players.get(client.sessionId);
+    if (!player) return;
 
     const inv = room.inventories.get(client.sessionId) ?? {};
     const tools = room.tools.get(client.sessionId) ?? new Set<string>();
@@ -16,12 +20,12 @@ export function registerCraft(room: WorldRoom) {
       return;
     }
 
-    // Check if they have the required station
-    if (recipe.station && !tools.has(recipe.station)) {
-      client.send(
-        "notice",
-        `You need a ${recipe.station} to craft ${recipe.name}.`,
-      );
+    // must be standing near the required station (e.g. a placed furnace)
+    if (
+      recipe.station &&
+      !nearStation(room.state, player.x, player.y, recipe.station)
+    ) {
+      client.send("notice", `You need to be near a ${recipe.station}.`);
       return;
     }
 

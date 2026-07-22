@@ -44,6 +44,23 @@ export function initCrafting(ctx) {
     return ITEM_DB[key] || { name: recipe.name, icon: "📦", color: "#9fb0c3" };
   }
 
+  function nearStation(kind) {
+    const me = room.state.players.get(room.sessionId);
+    if (!me) return false;
+    const T = room.state.tile || 64,
+      C = room.state.cols || 32;
+    const pc = Math.floor(me.x / T),
+      pr = Math.floor(me.y / T);
+    let found = false;
+    room.state.placed.forEach((p) => {
+      if (found || p.kind !== kind) return;
+      const c = p.index % C,
+        r = Math.floor(p.index / C);
+      if (Math.abs(c - pc) <= 2 && Math.abs(r - pr) <= 2) found = true;
+    });
+    return found;
+  }
+
   function render() {
     list.innerHTML = "";
     for (const recipe of RECIPES) {
@@ -75,17 +92,16 @@ export function initCrafting(ctx) {
       }
       row.append(costs);
 
-      const needsStation =
-        recipe.station && !ctx.myTools.includes(recipe.station);
+      const needsStation = recipe.station && !nearStation(recipe.station);
       const btn = document.createElement("button");
       btn.className = "craft-do";
       if (owned(recipe)) {
         btn.textContent = "Owned";
         btn.disabled = true;
       } else if (needsStation) {
-        btn.textContent = "Needs 🔥";
+        btn.textContent = "Needs 🔥 nearby";
         btn.disabled = true;
-        btn.title = `Requires a ${recipe.station}`;
+        btn.title = `Stand near a ${recipe.station}`;
       } else if (!canAfford(recipe)) {
         btn.textContent = "Craft";
         btn.disabled = true;
@@ -98,13 +114,17 @@ export function initCrafting(ctx) {
     }
   }
 
+  let stationTimer = null;
   function openCrafting() {
     render();
     modal.classList.add("is-open");
+    clearInterval(stationTimer);
+    stationTimer = setInterval(render, 500); // station availability updates as you move
   }
 
   function closeCrafting() {
     modal.classList.remove("is-open");
+    clearInterval(stationTimer);
   }
 
   craftButton.onclick = () => (isOpen() ? closeCrafting() : openCrafting());

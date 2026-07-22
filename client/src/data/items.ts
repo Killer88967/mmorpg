@@ -100,9 +100,9 @@ export const ITEM_DB: Items = {
     icon: "🔥",
     color: "#e0692f",
     rarity: "uncommon",
-    type: "Tool",
-    stats: { Enables: "Smelting ore" },
-    desc: "Turns raw ore into iron bars.",
+    type: "Station",
+    stats: { Enables: "Smelting (stand near)" },
+    desc: "Place it, then stand nearby to smelt ore into iron.",
   },
   wall: {
     name: "Stone Wall",

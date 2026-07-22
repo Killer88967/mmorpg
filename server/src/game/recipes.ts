@@ -49,7 +49,7 @@ export const RECIPES: Recipe[] = [
     id: "furnace",
     name: "Furnace",
     inputs: { stone: 8 },
-    output: { kind: "tool", tool: "furnace" },
+    output: { kind: "item", item: "furnace", count: 1 },
   },
   {
     id: "iron_bar",
