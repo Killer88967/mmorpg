@@ -13,6 +13,7 @@ Built with an authoritative [Colyseus](https://colyseus.io/) server (state is si
 - **Tool gating** — resources are locked behind tool capabilities: bare hands, a hatchet (`chop`), a basic pickaxe (`mine`), or a stone/iron pickaxe (`mine2`).
 - **Player-to-player trading** — send and accept trade offers with other players in the world.
 - **Chat** — world-wide text chat.
+- **Building** — craft stone walls and place them in the world from a build hotbar (with a ghost preview and placement range). Walls block players and mobs alike, and only the owner can break them to get the block back.
 - **Combat** — attack nearby mobs (auto-picking the best weapon you're carrying, on a swing cooldown). Kills drop loot such as slime gel.
 - **Mobs that fight back** — slimes wander until a player enters their aggro range, then chase and hit for damage. Players have a health bar; taking a hit flashes the screen, and dying respawns you at a random spot. Health regenerates after a few seconds out of combat.
 
@@ -33,16 +34,16 @@ Built with an authoritative [Colyseus](https://colyseus.io/) server (state is si
 │       ├── main.ts         # bootstraps the game
 │       ├── input.ts        # keyboard handling
 │       ├── net/            # Colyseus room connection
-│       ├── world/          # camera, map, mob rendering
-│       ├── ui/             # chat, inventory, crafting, trade, tooltips, HUD
+│       ├── world/          # camera, map, mob + placed-block rendering
+│       ├── ui/             # chat, inventory, crafting, trade, build bar, HUD
 │       └── data/           # client-side item/recipe/mob definitions
 ├── server/                 # Colyseus game server
 │   ├── prisma/             # schema + migrations
 │   └── src/
 │       ├── index.ts        # server entry point
 │       ├── rooms/          # WorldRoom + synced schema (WorldState)
-│       ├── game/           # map generation, resources, recipes, mobs, constants
-│       └── handlers/       # harvest, craft, trade, discard, combat handlers
+│       ├── game/           # map generation, resources, recipes, mobs, building
+│       └── handlers/       # harvest, craft, trade, discard, combat, building
 └── package.json            # root scripts (run client + server together)
 ```
 
@@ -99,15 +100,17 @@ Then open the URL printed by Vite (typically http://localhost:5173) in your brow
 | `Enter`                  | Open chat                  |
 | `Esc`                    | Close the active menu      |
 
+**Building** is mouse-driven: select a block in the build bar, then click a tile within range to place it (a ghost preview shows valid spots). With nothing selected, click one of your own placed blocks to break it and get the block back.
+
 ## World & Progression
 
 The map is a 32×32 tile grid containing grass, a lake, crossroad paths, trees, rocks, ore, bushes (sticks), and flint. A rough progression loop:
 
 1. Gather **wood** (trees) and **flint** by hand.
 2. Craft **sticks**, then a **flint hatchet** and **flint pickaxe**.
-3. Mine **stone**, craft **stone tools** and a **furnace**.
+3. Mine **stone**, craft **stone tools**, **stone walls**, and a **furnace**.
 4. Smelt **ore** into **iron bars**, then craft **iron tools** and an **iron sword**.
-5. Wield the **sword** to kill slimes faster and farm **slime gel**.
+5. Wield the **sword** to kill slimes faster and farm **slime gel**, and wall off a base of your own.
 
 ## License
 

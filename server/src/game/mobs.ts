@@ -13,7 +13,7 @@ export const MOB_TYPES: Record<
 export const MAX_MOBS = 12;
 
 // player-attacks-mob (used by handlers/combat.ts)
-export const WEAPONS: Record<string, number> = { sword: 12 };
+export const WEAPONS: Record<string, number> = { iron_sword: 12 };
 export const FIST_DAMAGE = 4;
 export const ATTACK_RANGE = 44;
 export const ATTACK_COOLDOWN = 400;
