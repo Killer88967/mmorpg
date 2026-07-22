@@ -10,6 +10,8 @@ import { registerDiscard } from "@/handlers/discard.js";
 import { registerCraft } from "@/handlers/craft.js";
 import { registerMobs } from "@/game/mobs.js";
 import { registerCombat } from "@/handlers/combat.js";
+import { registerBuilding } from "@/handlers/building.js";
+import { isBlocked } from "@/game/building.js";
 
 type Input = { up: boolean; down: boolean; left: boolean; right: boolean };
 
@@ -157,6 +159,7 @@ export class WorldRoom extends Room {
     registerTrade(this);
     registerDiscard(this);
     registerCraft(this);
+    registerBuilding(this);
 
     // fixed simulation tick — 30fps
     this.setSimulationInterval((dt) => this.update(dt), 1000 / 30);
@@ -183,8 +186,8 @@ export class WorldRoom extends Room {
       const nextX = clamp(player.x + dx * SPEED * dt, 0, WORLD.w);
       const nextY = clamp(player.y + dy * SPEED * dt, 0, WORLD.h);
       // axis-separated so sliding along a wall still works
-      if (!SOLID.has(tileAt(this.state, nextX, player.y))) player.x = nextX;
-      if (!SOLID.has(tileAt(this.state, player.x, nextY))) player.y = nextY;
+      if (!isBlocked(this.state, nextX, player.y)) player.x = nextX;
+      if (!isBlocked(this.state, player.x, nextY)) player.y = nextY;
     });
   }
 

@@ -17,6 +17,12 @@ export class Mob extends Schema {
   @type("number") maxHp = 10;
 }
 
+export class Placed extends Schema {
+  @type("number") index = 0;
+  @type("string") kind = "wall";
+  @type("string") owner = "";
+}
+
 export class WorldState extends Schema {
   @type("number") cols: number = 0;
   @type("number") rows: number = 0;
@@ -24,4 +30,5 @@ export class WorldState extends Schema {
   @type(["number"]) tiles = new ArraySchema<number>();
   @type({ map: Player }) players = new MapSchema<Player>();
   @type({ map: Mob }) mobs = new MapSchema<Mob>();
+  @type({ map: Placed }) placed = new MapSchema<Placed>();
 }

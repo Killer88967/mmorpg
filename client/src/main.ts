@@ -12,8 +12,10 @@ import { initContextMenu } from "@/ui/contextMenu";
 import { initTooltip } from "@/ui/tooltip";
 import { initCrafting } from "@/ui/crafting";
 import { initHud } from "@/ui/hud";
+import { initBuild } from "@/ui/build";
 import { initInput } from "@/input";
 import { initMobs } from "@/world/mobs";
+import { initPlaced } from "@/world/placed";
 
 async function main() {
   const app = new Application();
@@ -37,6 +39,10 @@ async function main() {
     held: { up: false, down: false, left: false, right: false },
     chatOpen: false,
     invOpen: false,
+    app,
+    world,
+    sprites,
+    $,
   };
 
   // ---- world map (tiles + live tile updates) ----
@@ -53,9 +59,11 @@ async function main() {
   initTooltip(ctx);
   initInput(ctx);
   initHud(ctx);
+  initBuild(ctx);
 
   // ---- Mob Init ----
   initMobs({ app, world, room, $ });
+  initPlaced({ world, room, $ });
 
   // ---- players ----
   $.onAdd("players", (player, sessionId) => {

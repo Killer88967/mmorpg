@@ -33,6 +33,12 @@ export const RECIPES: RecipeArray = [
     output: { kind: "tool", tool: "stone_pickaxe" },
   },
   {
+    id: "wall",
+    name: "Stone Wall",
+    inputs: { stone: 1 },
+    output: { kind: "item", item: "wall", count: 2 },
+  },
+  {
     id: "furnace",
     name: "Furnace",
     inputs: { stone: 8 },

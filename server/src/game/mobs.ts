@@ -1,8 +1,8 @@
 import type { WorldRoom } from "@/rooms/WorldRoom.js";
 import { Mob } from "@/rooms/schema/WorldState.js";
 import { WORLD } from "@/game/constants.js";
-import { SOLID } from "@/game/resources.js";
-import { tileAt, clamp } from "@/game/map.js";
+import { clamp } from "@/game/map.js";
+import { isBlocked } from "@/game/building.js";
 
 export const MOB_TYPES: Record<
   string,
@@ -44,7 +44,7 @@ export function registerMobs(room: WorldRoom) {
       x = Math.random() * WORLD.w;
       y = Math.random() * WORLD.h;
       tries++;
-    } while (SOLID.has(tileAt(room.state, x, y)) && tries < 50);
+    } while (isBlocked(room.state, x, y) && tries < 50);
 
     const id = "m" + ++seq;
     const type = MOB_TYPES.slime;
@@ -100,8 +100,8 @@ export function registerMobs(room: WorldRoom) {
             mob.x + ((tx - mob.x) / dist) * type.speed * CHASE_MULT * dt;
           const ny =
             mob.y + ((ty - mob.y) / dist) * type.speed * CHASE_MULT * dt;
-          if (!SOLID.has(tileAt(room.state, nx, mob.y))) mob.x = nx;
-          if (!SOLID.has(tileAt(room.state, mob.x, ny))) mob.y = ny;
+          if (!isBlocked(room.state, nx, mob.y)) mob.x = nx;
+          if (!isBlocked(room.state, mob.x, ny)) mob.y = ny;
         }
         return;
       }
@@ -132,8 +132,8 @@ export function registerMobs(room: WorldRoom) {
       const d = Math.hypot(dx, dy) || 1;
       const nx = mob.x + (dx / d) * type.speed * dt;
       const ny = mob.y + (dy / d) * type.speed * dt;
-      if (!SOLID.has(tileAt(room.state, nx, mob.y))) mob.x = nx;
-      if (!SOLID.has(tileAt(room.state, mob.x, ny))) mob.y = ny;
+      if (!isBlocked(room.state, nx, mob.y)) mob.x = nx;
+      if (!isBlocked(room.state, mob.x, ny)) mob.y = ny;
     });
   }, 100);
 }

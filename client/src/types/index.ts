@@ -4,7 +4,7 @@ export type Item = {
   icon: string;
   color: string;
   rarity: "common" | "uncommon" | "rare" | "epic" | "legendary";
-  type: "Material" | "Tool" | "Weapon";
+  type: "Material" | "Tool" | "Weapon" | "Block";
   stats?: Record<string, string | number>;
   desc: string;
 };
@@ -39,5 +39,13 @@ export type RecipeObj = {
   };
 };
 
+export type Placeable = {
+  item: string;
+  name: string;
+  icon: string;
+  color: number;
+};
+
 export type Recipes = Record<string, RecipeObj>;
 export type Items = Record<string, Item>;
+export type PlaceInfo = Record<string, Placeable>;

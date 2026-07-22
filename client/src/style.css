@@ -793,3 +793,41 @@ canvas {
 .death-toast.show {
   opacity: 1;
 }
+
+/* --- build bar --- */
+.build-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 26;
+}
+.build-slot {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  font-size: 20px;
+  background: rgba(10, 12, 18, 0.85);
+  border: 1px solid #3a4050;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.build-slot.is-selected {
+  border-color: #7fd1ff;
+  box-shadow: 0 0 0 2px rgba(127, 209, 255, 0.4);
+}
+.build-slot.is-empty {
+  opacity: 0.4;
+}
+.build-count {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font:
+    700 11px system-ui,
+    sans-serif;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}

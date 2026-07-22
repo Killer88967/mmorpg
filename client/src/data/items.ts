@@ -104,6 +104,14 @@ export const ITEM_DB: Items = {
     stats: { Enables: "Smelting ore" },
     desc: "Turns raw ore into iron bars.",
   },
+  wall: {
+    name: "Stone Wall",
+    icon: "🧱",
+    color: "#7a7d85",
+    rarity: "common",
+    type: "Block",
+    desc: "A solid block. Place it to wall things off.",
+  },
   iron_hatchet: {
     name: "Iron Hatchet",
     icon: "🪓",

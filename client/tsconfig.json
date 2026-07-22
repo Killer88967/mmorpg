@@ -19,7 +19,7 @@
     "noFallthroughCasesInSwitch": true,
 
     "paths": {
-      "@/*": ["./*", "./src/*"],
+      "@/*": ["./src/*"],
       "@/server/*": ["../server/src/*"],
       "@/server/schema/*": ["../server/src/rooms/schema/*"]
     }
