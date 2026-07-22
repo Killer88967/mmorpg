@@ -1,6 +1,6 @@
 # MMORPG
 
-A tiny browser-based multiplayer RPG sandbox. Players share a persistent tile world where they can walk around, chat, gather resources, craft tools, trade with each other, and watch slimes wander about.
+A tiny browser-based multiplayer RPG sandbox. Players share a persistent tile world where they can walk around, chat, gather resources, craft tools, trade with each other, and fight roaming slimes.
 
 Built with an authoritative [Colyseus](https://colyseus.io/) server (state is simulated server-side and synced to clients) and a [PixiJS](https://pixijs.com/) client rendered on the web.
 
@@ -13,7 +13,8 @@ Built with an authoritative [Colyseus](https://colyseus.io/) server (state is si
 - **Tool gating** — resources are locked behind tool capabilities: bare hands, a hatchet (`chop`), a basic pickaxe (`mine`), or a stone/iron pickaxe (`mine2`).
 - **Player-to-player trading** — send and accept trade offers with other players in the world.
 - **Chat** — world-wide text chat.
-- **Wandering mobs** — slimes spawn and roam the map with simple wander AI.
+- **Combat** — attack nearby mobs (auto-picking the best weapon you're carrying, on a swing cooldown). Kills drop loot such as slime gel.
+- **Mobs that fight back** — slimes wander until a player enters their aggro range, then chase and hit for damage. Players have a health bar; taking a hit flashes the screen, and dying respawns you at a random spot. Health regenerates after a few seconds out of combat.
 
 ## Tech Stack
 
@@ -33,7 +34,7 @@ Built with an authoritative [Colyseus](https://colyseus.io/) server (state is si
 │       ├── input.ts        # keyboard handling
 │       ├── net/            # Colyseus room connection
 │       ├── world/          # camera, map, mob rendering
-│       ├── ui/             # chat, inventory, crafting, trade, tooltips
+│       ├── ui/             # chat, inventory, crafting, trade, tooltips, HUD
 │       └── data/           # client-side item/recipe/mob definitions
 ├── server/                 # Colyseus game server
 │   ├── prisma/             # schema + migrations
@@ -41,7 +42,7 @@ Built with an authoritative [Colyseus](https://colyseus.io/) server (state is si
 │       ├── index.ts        # server entry point
 │       ├── rooms/          # WorldRoom + synced schema (WorldState)
 │       ├── game/           # map generation, resources, recipes, mobs, constants
-│       └── handlers/       # harvest, craft, trade, discard message handlers
+│       └── handlers/       # harvest, craft, trade, discard, combat handlers
 └── package.json            # root scripts (run client + server together)
 ```
 
@@ -92,6 +93,7 @@ Then open the URL printed by Vite (typically http://localhost:5173) in your brow
 | ------------------------ | -------------------------- |
 | `W` `A` `S` `D` / arrows | Move                       |
 | `E`                      | Harvest the tile you're on |
+| `Space`                  | Attack the nearest mob     |
 | `C`                      | Open / close crafting      |
 | `I` or `B`               | Open / close inventory     |
 | `Enter`                  | Open chat                  |
@@ -105,6 +107,7 @@ The map is a 32×32 tile grid containing grass, a lake, crossroad paths, trees, 
 2. Craft **sticks**, then a **flint hatchet** and **flint pickaxe**.
 3. Mine **stone**, craft **stone tools** and a **furnace**.
 4. Smelt **ore** into **iron bars**, then craft **iron tools** and an **iron sword**.
+5. Wield the **sword** to kill slimes faster and farm **slime gel**.
 
 ## License
 
