@@ -1,0 +1,5 @@
+-- CreateTable
+CREATE TABLE "WorldData" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT DEFAULT 1,
+    "placed" TEXT NOT NULL DEFAULT '[]'
+);

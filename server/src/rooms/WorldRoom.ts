@@ -1,5 +1,5 @@
 import { Room, Client } from "colyseus";
-import { WorldState, Player } from "@/rooms/schema/WorldState.js";
+import { WorldState, Player, Placed } from "@/rooms/schema/WorldState.js";
 import { prisma } from "@/db.js";
 import { TILE, SPEED, WORLD } from "@/game/constants.js";
 import { SOLID, TOOL_CAPS } from "@/game/resources.js";
@@ -21,6 +21,7 @@ export class WorldRoom extends Room {
 
   private inputs = new Map<string, Input>();
   private lastDamaged = new Map<string, number>();
+  private _worldDirty = false;
   inventories = new Map<string, Record<string, number>>();
   tools = new Map<string, Set<string>>();
   offers = new Map<string, any>();
@@ -47,6 +48,50 @@ export class WorldRoom extends Room {
     await prisma.character
       .update({ where: { name }, data: { inventory: JSON.stringify(inv) } })
       .catch(() => {});
+  }
+
+  async loadWorld(): Promise<void> {
+    const row = await prisma.worldData
+      .findUnique({ where: { id: 1 } })
+      .catch((): any => null);
+    if (!row) return;
+    let arr: any[] = [];
+    try {
+      arr = JSON.parse(row.placed || "[]");
+    } catch {}
+    for (const o of arr) {
+      if (typeof o?.index !== "number") continue;
+      const p = new Placed();
+      p.index = o.index;
+      p.kind = o.kind ?? "wall";
+      p.owner = o.owner ?? "";
+      this.state.placed.set(String(o.index), p);
+    }
+  }
+
+  async saveWorld(): Promise<void> {
+    const arr: any[] = [];
+    this.state.placed.forEach((p) =>
+      arr.push({ index: p.index, kind: p.kind, owner: p.owner }),
+    );
+    const placed = JSON.stringify(arr);
+    await prisma.worldData
+      .upsert({
+        where: { id: 1 },
+        update: { placed },
+        create: { id: 1, placed },
+      })
+      .catch(() => {});
+  }
+
+  // coalesce bursts of building into one write every couple seconds
+  markWorldDirty(): void {
+    if (this._worldDirty) return;
+    this._worldDirty = true;
+    this.clock.setTimeout(() => {
+      this._worldDirty = false;
+      this.saveWorld();
+    }, 2000);
   }
 
   damagePlayer(sessionId: string, amount: number) {
@@ -112,8 +157,9 @@ export class WorldRoom extends Room {
     return { x: 16 * TILE + TILE / 2, y: 16 * TILE + TILE / 2 };
   }
 
-  onCreate() {
+  async onCreate() {
     generateMap(this.state);
+    await this.loadWorld();
 
     this.onMessage("input", (client, data: Input) => {
       this.inputs.set(client.sessionId, {
@@ -165,6 +211,10 @@ export class WorldRoom extends Room {
     this.setSimulationInterval((dt) => this.update(dt), 1000 / 30);
     this.clock.setInterval(() => this.saveAll(), 15000);
     this.clock.setInterval(() => this.regen(), 1000);
+  }
+
+  async onDispose(): Promise<void> {
+    await this.saveWorld();
   }
 
   update(dtMs: number) {

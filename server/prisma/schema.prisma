@@ -17,3 +17,8 @@ model Character {
   tools     String   @default("[]")
   updatedAt DateTime @updatedAt
 }
+
+model WorldData {
+  id     Int    @id @default(1)
+  placed String @default("[]")
+}

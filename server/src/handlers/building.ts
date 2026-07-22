@@ -45,6 +45,7 @@ export function registerBuilding(room: WorldRoom) {
     placed.kind = kind;
     placed.owner = player.name;
     room.state.placed.set(String(index), placed);
+    room.markWorldDirty();
     room.persist(client.sessionId);
   });
 
@@ -61,6 +62,7 @@ export function registerBuilding(room: WorldRoom) {
 
     const def = PLACEABLES[placed.kind];
     room.state.placed.delete(String(index));
+    room.markWorldDirty();
     if (def) {
       const inv = room.inventories.get(client.sessionId) ?? {};
       inv[def.item] = (inv[def.item] ?? 0) + 1;
