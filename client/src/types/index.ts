@@ -77,6 +77,19 @@ export type GameContext = {
   $: ReturnType<typeof Callbacks.get>;
 
   setHp?: (hp: number, maxHp: number) => void;
+
+  chatLog?: HTMLDivElement;
+  chatInput?: HTMLInputElement;
+
+  makeItemChip?: (item: string, count: number | null) => HTMLSpanElement;
+
+  appendSystem?: (text: string) => void;
+  appendLine?: (name: string, text: string) => void;
+
+  showLog?: () => void;
+  scheduleFade?: () => void;
+  openChat?: () => void;
+  closeChat?: () => void;
 };
 
 export type Recipes = Record<string, RecipeObj>;

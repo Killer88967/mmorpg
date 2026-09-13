@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ITEM_DB } from "@/data/items";
 import type { GameContext } from "@/types";
 import { formatAmount } from "@/util/format";
@@ -7,16 +6,15 @@ import { formatAmount } from "@/util/format";
 export function initChat(ctx: GameContext) {
   const room = ctx.room;
 
-  const offerLines = new Map();
-  ctx.openOffers = 0;
+  const offerLines = new Map<string, HTMLElement>();
+  let openOffers = 0;
 
-  const ITEM_RE = /\{([a-zA-Z][a-zA-Z0-9_]*)(?:::(\d+))?\}/g;
   const CHAT_TOKEN_RE =
     /(\{[a-zA-Z][a-zA-Z0-9_]*(?:::\d+)?\}|@[a-zA-Z0-9_]+|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
   const ITEM_TOKEN_RE = /^\{([a-zA-Z][a-zA-Z0-9_]*)(?:::(\d+))?\}$/;
   const MENTION_RE = /^@([a-zA-Z0-9_]+)$/;
 
-  function makeItemChip(item: string, count: number) {
+  function makeItemChip(item: string, count: number | null): HTMLSpanElement {
     const def = ITEM_DB[item] || { name: item, color: "#9fb0c3", icon: "📦" };
     const chip = document.createElement("span");
     chip.className = "chat-item";
@@ -37,7 +35,7 @@ export function initChat(ctx: GameContext) {
   }
 
   function appendText(line: HTMLElement, text: string) {
-    let last: number = 0;
+    let last = 0;
 
     for (const match of text.matchAll(CHAT_TOKEN_RE)) {
       const token = match[0];
@@ -195,8 +193,7 @@ export function initChat(ctx: GameContext) {
     line.className = "chat-line chat-system";
     line.textContent = text;
     chatLog.appendChild(line);
-    while (chatLog.childNodes.length > 12)
-      chatLog.removeChild(chatLog.firstChild);
+    while (chatLog.childNodes.length > 12) chatLog.firstChild?.remove();
     chatLog.scrollTop = chatLog.scrollHeight;
     showLog();
   }
@@ -212,7 +209,7 @@ export function initChat(ctx: GameContext) {
   chatInput.placeholder = "Say something…";
   document.body.appendChild(chatInput);
 
-  let fadeTimer;
+  let fadeTimer: ReturnType<typeof setTimeout> | undefined;
 
   function showLog() {
     clearTimeout(fadeTimer);
@@ -222,14 +219,16 @@ export function initChat(ctx: GameContext) {
   function scheduleFade() {
     clearTimeout(fadeTimer);
     fadeTimer = setTimeout(() => {
-      if (!ctx.chatOpen && ctx.openOffers === 0)
+      if (!ctx.chatOpen && openOffers === 0)
         chatLog.classList.remove("is-visible");
     }, 5000);
   }
 
   function openChat() {
     ctx.chatOpen = true;
-    for (const k in ctx.held) ctx.held[k] = false; // stop walking while typing
+    for (const key of Object.keys(ctx.held) as Array<keyof typeof ctx.held>) {
+      ctx.held[key] = false;
+    } // stop walking while typing
     room.send("input", ctx.held);
     chatInput.classList.add("is-open");
     chatInput.focus();
@@ -252,8 +251,7 @@ export function initChat(ctx: GameContext) {
     line.appendChild(who);
     appendText(line, text);
     chatLog.appendChild(line);
-    while (chatLog.childNodes.length > 12)
-      chatLog.removeChild(chatLog.firstChild);
+    while (chatLog.childNodes.length > 12) chatLog.firstChild?.remove();
     chatLog.scrollTop = chatLog.scrollHeight;
   }
 
@@ -309,16 +307,15 @@ export function initChat(ctx: GameContext) {
 
     chatLog.appendChild(line);
     offerLines.set(id, line);
-    ctx.openOffers++;
-    while (chatLog.childNodes.length > 12)
-      chatLog.removeChild(chatLog.firstChild);
+    openOffers++;
+    while (chatLog.childNodes.length > 12) chatLog.firstChild?.remove();
     chatLog.scrollTop = chatLog.scrollHeight;
     showLog();
   });
 
   room.onMessage("offerClosed", ({ id, status, by }) => {
     const line = offerLines.get(id);
-    ctx.openOffers = Math.max(0, ctx.openOffers - 1);
+    openOffers = Math.max(0, openOffers - 1);
     if (line) {
       line.querySelector(".offer-btn")?.remove();
       const tag = document.createElement("span");
@@ -333,7 +330,7 @@ export function initChat(ctx: GameContext) {
       line.classList.add("is-closed");
       offerLines.delete(id);
     }
-    if (ctx.openOffers === 0) scheduleFade();
+    if (openOffers === 0) scheduleFade();
     showLog();
   });
 
