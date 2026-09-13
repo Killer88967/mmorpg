@@ -1,7 +1,12 @@
 {
+  "name": "mmorpg",
+  "private": true,
   "scripts": {
     "client": "cd client && npm run dev",
     "server": "cd server && npm start",
     "dev": "concurrently \"npm run client\" \"npm run server\""
+  },
+  "devDependencies": {
+    "concurrently": "latest"
   }
 }
