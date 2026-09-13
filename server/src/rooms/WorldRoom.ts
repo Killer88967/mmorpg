@@ -215,6 +215,124 @@ export class WorldRoom extends Room {
     return { x: 16 * TILE + TILE / 2, y: 16 * TILE + TILE / 2 };
   }
 
+  private handleChatCommand(
+    client: Client,
+    text: string,
+    senderName: string,
+  ): boolean {
+    const [rawCommand, ...args] = text.slice(1).trim().split(/\s+/);
+    const command = rawCommand?.toLowerCase();
+
+    switch (command) {
+      case "me": {
+        const action = args.join(" ").slice(0, 180).trim();
+
+        if (!action) {
+          client.send("notice", "Usage: /me <action>");
+          return true;
+        }
+
+        this.broadcast("chatAction", {
+          name: senderName,
+          text: action,
+        });
+
+        return true;
+      }
+
+      case "players": {
+        const players = [...this.state.players.values()].map(
+          (player) => player.name,
+        );
+
+        const spectators = [...this.spectatorNames.values()];
+
+        client.send(
+          "notice",
+          `Players (${players.length}/${MAX_PLAYERS}): ${
+            players.length ? players.join(", ") : "none"
+          }`,
+        );
+
+        if (spectators.length) {
+          client.send(
+            "notice",
+            `Spectators (${spectators.length}): ${spectators.join(", ")}`,
+          );
+        }
+
+        return true;
+      }
+
+      case "w":
+      case "whisper": {
+        const targetName = args.shift()?.trim();
+        const message = args.join(" ").slice(0, 180).trim();
+
+        if (!targetName || !message) {
+          client.send("notice", `Usage: /${command} <name> <message>`);
+          return true;
+        }
+
+        const matches: Array<{
+          client: Client;
+          name: string;
+        }> = [];
+
+        for (const targetClient of this.clients) {
+          const targetPlayer = this.state.players.get(targetClient.sessionId);
+
+          const name =
+            targetPlayer?.name ??
+            this.spectatorNames.get(targetClient.sessionId);
+
+          if (name && name.toLowerCase() === targetName.toLowerCase()) {
+            matches.push({
+              client: targetClient,
+              name,
+            });
+          }
+        }
+
+        if (matches.length === 0) {
+          client.send("notice", `Player "${targetName}" was not found.`);
+
+          return true;
+        }
+
+        if (matches.length > 1) {
+          client.send(
+            "notice",
+            `Multiple connected users are named "${targetName}".`,
+          );
+
+          return true;
+        }
+
+        const target = matches[0];
+
+        target.client.send("whisper", {
+          from: senderName,
+          to: target.name,
+          text: message,
+        });
+
+        if (target.client.sessionId !== client.sessionId) {
+          client.send("whisper", {
+            from: senderName,
+            to: target.name,
+            text: message,
+          });
+        }
+
+        return true;
+      }
+
+      default:
+        return false;
+    }
+  }
+
   async onCreate() {
     generateMap(this.state);
     await this.loadWorld();
@@ -251,6 +369,16 @@ export class WorldRoom extends Room {
         client.send("notice", `Granted ${t} (dev).`);
         client.send("toolsUpdate", [...set]);
         return;
+      }
+
+      if (clean.startsWith("/")) {
+        const handled = this.handleChatCommand(
+          client,
+          clean,
+          player?.name ?? spectatorName ?? "Anon",
+        );
+
+        if (handled) return;
       }
 
       this.broadcast("chat", {

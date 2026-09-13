@@ -1,9 +1,10 @@
 // @ts-nocheck
 import { ITEM_DB } from "@/data/items";
+import type { GameContext } from "@/types";
 import { formatAmount } from "@/util/format";
 
 // wires up chat + offer messages. Shares mutable state through `ctx`.
-export function initChat(ctx) {
+export function initChat(ctx: GameContext) {
   const room = ctx.room;
 
   const offerLines = new Map();
@@ -11,7 +12,7 @@ export function initChat(ctx) {
 
   const ITEM_RE = /\{([a-zA-Z][a-zA-Z0-9_]*)(?:::(\d+))?\}/g;
 
-  function makeItemChip(item, count) {
+  function makeItemChip(item: string, count: number) {
     const def = ITEM_DB[item] || { name: item, color: "#9fb0c3", icon: "📦" };
     const chip = document.createElement("span");
     chip.className = "chat-item";
@@ -31,7 +32,7 @@ export function initChat(ctx) {
     return chip;
   }
 
-  function appendText(line, text) {
+  function appendText(line, text: string) {
     let last = 0,
       m;
     ITEM_RE.lastIndex = 0;
@@ -50,7 +51,7 @@ export function initChat(ctx) {
       line.appendChild(document.createTextNode(text.slice(last)));
   }
 
-  function expandItemTokens(text) {
+  function expandItemTokens(text: string) {
     return text.replace(
       /\{([a-zA-Z][a-zA-Z0-9_]*)(?:::(\d+))?\}/g,
       (full, item, count) =>
@@ -60,17 +61,58 @@ export function initChat(ctx) {
     );
   }
 
-  function handleChatSend(text) {
-    if (text.toLowerCase().startsWith("/offer")) {
-      const parsed = parseOfferCommand(text);
-      if (parsed) room.send("offer", parsed);
-      else appendSystem("Usage: /offer <item> <count> for <item> <count>");
+  function handleChatSend(text: string) {
+    if (text.startsWith("/") && handleCommand(text)) {
       return;
     }
     room.send("chat", expandItemTokens(text));
   }
 
-  function parseOfferCommand(text) {
+  function handleCommand(text: string) {
+    const [rawCommand] = text.slice(1).trim().split(/\s+/);
+    const command = rawCommand?.toLowerCase();
+
+    switch (command) {
+      case "help": {
+        appendSystem("Chat commands:");
+        appendSystem("/me <action> — perform an action");
+        appendSystem("/w <name> <message> — whisper to a player");
+        appendSystem("/whisper <name> <message> — same as /w");
+        appendSystem("/players — list connected players");
+        appendSystem(
+          "/offer <item> <count> for <item> <count> — create a trade offer",
+        );
+        return true;
+      }
+
+      case "offer": {
+        const parsed = parseOfferCommand(text);
+
+        if (parsed) {
+          room.send("offer", parsed);
+        } else {
+          appendSystem("Usage: /offer <item> <count> for <item> <count>");
+        }
+
+        return true;
+      }
+
+      case "me":
+      case "w":
+      case "whisper":
+      case "players": {
+        room.send("chat", text);
+        return true;
+      }
+
+      default: {
+        appendSystem(`Unknown command: /${command || ""}. Try /help.`);
+        return true;
+      }
+    }
+  }
+
+  function parseOfferCommand(text: string) {
     const m = text.match(
       /^\/offer\s+([a-z][a-z0-9_]*)\s+(\d+)\s+(?:for\s+)?([a-z][a-z0-9_]*)\s+(\d+)\s*$/i,
     );
@@ -81,7 +123,7 @@ export function initChat(ctx) {
     };
   }
 
-  function appendSystem(text) {
+  function appendSystem(text: string) {
     const line = document.createElement("div");
     line.className = "chat-line chat-system";
     line.textContent = text;
@@ -134,7 +176,7 @@ export function initChat(ctx) {
     scheduleFade();
   }
 
-  function appendLine(name, text) {
+  function appendLine(name: string, text: string) {
     const line = document.createElement("div");
     line.className = "chat-line";
     const who = document.createElement("span");
@@ -163,6 +205,15 @@ export function initChat(ctx) {
     appendLine(msg.name, msg.text);
     showLog();
     if (!ctx.chatOpen) scheduleFade();
+  });
+
+  room.onMessage("chatAction", ({ name, text }) => {
+    appendSystem(`* ${name} ${text}`);
+  });
+
+  room.onMessage("whisper", ({ from, to, text }) => {
+    const label = from === ctx.myName ? `To ${to}` : `From ${from}`;
+    appendSystem(`[whisper] ${label}: ${text}`);
   });
 
   room.onMessage("offerPosted", ({ id, fromName, give, want }) => {
