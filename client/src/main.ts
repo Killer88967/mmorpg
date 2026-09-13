@@ -1,7 +1,7 @@
-// @ts-nocheck
 import "./style.css";
 import { Callbacks } from "@colyseus/sdk";
 import { Application, Graphics, Container, Text } from "pixi.js";
+import type { GameContext, PlayerSprite } from "@/types";
 import { createRoom } from "@/net/room";
 import { createMap } from "@/world/map";
 import { startCamera } from "@/world/camera";
@@ -26,14 +26,14 @@ async function main() {
   const world = new Container();
   app.stage.addChild(world);
 
-  const sprites = new Map();
+  const sprites = new Map<string, PlayerSprite>();
 
   const name = (prompt("Pick a name") || "Anon").slice(0, 16);
   const { room } = await createRoom(name);
   const $ = Callbacks.get(room);
 
   // shared UI context — mutable state + cross-module handles live here
-  const ctx = {
+  const ctx: GameContext = {
     room,
     myName: name,
     myInventory: {},
@@ -69,7 +69,10 @@ async function main() {
 
   // ---- players ----
   $.onAdd("players", (player, sessionId) => {
-    const g = new Graphics().rect(-12, -12, 24, 24).fill(player.color);
+    const g = new Graphics()
+      .rect(-12, -12, 24, 24)
+      .fill(player.color) as PlayerSprite;
+
     g.x = player.x;
     g.y = player.y;
     g.tx = player.x; // interpolation targets
