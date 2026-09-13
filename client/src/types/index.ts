@@ -80,6 +80,7 @@ export type GameContext = {
 
   chatLog?: HTMLDivElement;
   chatInput?: HTMLInputElement;
+  ctxMenu?: HTMLDivElement;
 
   makeItemChip?: (item: string, count: number | null) => HTMLSpanElement;
 
@@ -90,6 +91,15 @@ export type GameContext = {
   scheduleFade?: () => void;
   openChat?: () => void;
   closeChat?: () => void;
+
+  closeCtxMenu?: () => void;
+
+  craftModalIsOpen?: () => boolean;
+  openCrafting?: () => void;
+  closeCrafting?: () => void;
+
+  closeInv?: () => void;
+  toggleInv?: () => void;
 };
 
 export type CameraContext = Pick<

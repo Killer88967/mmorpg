@@ -1,12 +1,12 @@
-// @ts-nocheck
+import type { GameContext } from "@/types";
 
 // keyboard: Enter opens chat, E harvests, WASD moves, I/B toggles inventory.
 // Shared state via `ctx`.
-export function initInput(ctx) {
+export function initInput(ctx: GameContext) {
   const room = ctx.room;
 
   // ---- input state ----
-  const keymap = {
+  const keymap: Record<string, keyof GameContext["held"]> = {
     ArrowUp: "up",
     KeyW: "up",
     ArrowDown: "down",
@@ -22,7 +22,7 @@ export function initInput(ctx) {
     if (ctx.chatOpen) return;
     if (e.code === "Enter") {
       e.preventDefault();
-      ctx.openChat();
+      ctx.openChat?.();
       return;
     }
     if (e.code === "KeyE") {
@@ -34,24 +34,24 @@ export function initInput(ctx) {
       room.send("attack");
       return;
     }
-    if (e.code === "Escape" && ctx.ctxMenu.classList.contains("is-open")) {
-      ctx.closeCtxMenu();
+    if (e.code === "Escape" && ctx.ctxMenu?.classList.contains("is-open")) {
+      ctx.closeCtxMenu?.();
       return;
     }
     if (e.code === "Escape" && ctx.craftModalIsOpen?.()) {
-      ctx.closeCrafting();
+      ctx.closeCrafting?.();
       return;
     }
     if (e.code === "KeyC") {
-      ctx.craftModalIsOpen?.() ? ctx.closeCrafting() : ctx.openCrafting();
+      ctx.craftModalIsOpen?.() ? ctx.closeCrafting?.() : ctx.openCrafting?.();
       return;
     }
     if (e.code === "Escape" && ctx.invOpen) {
-      ctx.closeInv();
+      ctx.closeInv?.();
       return;
     }
     if (e.code === "KeyI" || e.code === "KeyB") {
-      ctx.toggleInv();
+      ctx.toggleInv?.();
       return;
     }
     const k = keymap[e.code];
