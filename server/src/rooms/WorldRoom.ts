@@ -32,8 +32,9 @@ export class WorldRoom extends Room {
   private async saveAll() {
     for (const [id, player] of this.state.players) {
       const inv = this.inventories.get(id) ?? {};
-      await prisma.character
-        .update({
+
+      try {
+        await prisma.character.update({
           where: { name: player.name },
           data: {
             x: player.x,
@@ -41,21 +42,36 @@ export class WorldRoom extends Room {
             inventory: JSON.stringify(inv),
             tools: JSON.stringify([...(this.tools.get(id) ?? [])]),
           },
-        })
-        .catch(() => {});
+        });
+      } catch (error) {
+        console.error(`Failed to save character "${player.name}":`, error);
+      }
     }
   }
 
   async saveOne(name: string, inv: any) {
-    await prisma.character
-      .update({ where: { name }, data: { inventory: JSON.stringify(inv) } })
-      .catch(() => {});
+    try {
+      await prisma.character.update({
+        where: { name },
+        data: {
+          inventory: JSON.stringify(inv),
+        },
+      });
+    } catch (error) {
+      console.error(`Failed to save inventory for "${name}":`, error);
+    }
   }
 
   async loadWorld(): Promise<void> {
-    const row = await prisma.worldData
-      .findUnique({ where: { id: 1 } })
-      .catch((): any => null);
+    let row;
+    try {
+      row = await prisma.worldData.findUnique({
+        where: { id: 1 },
+      });
+    } catch (error) {
+      console.error("Failed to load world data:", error);
+      return;
+    }
     if (!row) return;
     let arr: any[] = [];
     try {
@@ -85,13 +101,15 @@ export class WorldRoom extends Room {
     this.chests.forEach((items, index) => (chestObj[index] = items));
     const placed = JSON.stringify(arr);
     const chests = JSON.stringify(chestObj);
-    await prisma.worldData
-      .upsert({
+    try {
+      await prisma.worldData.upsert({
         where: { id: 1 },
         update: { placed, chests },
         create: { id: 1, placed, chests },
-      })
-      .catch(() => {});
+      });
+    } catch (error) {
+      console.error("Failed to save world data:", error);
+    }
   }
 
   // coalesce bursts of building into one write every couple seconds
@@ -138,15 +156,18 @@ export class WorldRoom extends Room {
   async persist(sessionId: string) {
     const player = this.state.players.get(sessionId);
     if (!player) return;
-    await prisma.character
-      .update({
+
+    try {
+      await prisma.character.update({
         where: { name: player.name },
         data: {
           inventory: JSON.stringify(this.inventories.get(sessionId) ?? {}),
           tools: JSON.stringify([...(this.tools.get(sessionId) ?? [])]),
         },
-      })
-      .catch(() => {});
+      });
+    } catch (error) {
+      console.error(`Failed to persist character "${player.name}":`, error);
+    }
   }
 
   playerCaps(sessionId: string): Set<string> {
@@ -289,8 +310,8 @@ export class WorldRoom extends Room {
     const player = this.state.players.get(client.sessionId);
     if (player) {
       const inv = this.inventories.get(client.sessionId) ?? {};
-      await prisma.character
-        .update({
+      try {
+        await prisma.character.update({
           where: { name: player.name },
           data: {
             x: player.x,
@@ -300,8 +321,13 @@ export class WorldRoom extends Room {
               ...(this.tools.get(client.sessionId) ?? []),
             ]),
           },
-        })
-        .catch(() => {});
+        });
+      } catch (error) {
+        console.error(
+          `Failed to save character "${player.name}" on disconnect:`,
+          error,
+        );
+      }
     }
     this.state.players.delete(client.sessionId);
     this.inputs.delete(client.sessionId);
