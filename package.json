@@ -2,9 +2,11 @@
   "name": "mmorpg",
   "private": true,
   "scripts": {
-    "client": "cd client && npm run dev",
-    "server": "cd server && npm start",
-    "dev": "concurrently \"npm run client\" \"npm run server\""
+    "client": "pnpm --filter client dev",
+    "server": "pnpm --filter server start",
+    "dev": "concurrently \"pnpm client\" \"pnpm server\"",
+    "build": "pnpm --filter server build && pnpm --filter client build",
+    "typecheck": "pnpm --filter server typecheck && pnpm --filter client typecheck"
   },
   "devDependencies": {
     "concurrently": "latest"

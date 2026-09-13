@@ -1,6 +1,14 @@
 node_modules
 build
+
+.env
+.env.*
+!.env.example
+
 .colyseus-cloud.json
 .devmode.json
+
 /src/generated/prisma
 dev.db
+data/*.db
+data/*.db-journal
