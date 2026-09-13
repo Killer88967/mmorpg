@@ -25,6 +25,8 @@ export class WorldRoom extends Room {
   private inputs = new Map<string, Input>();
   private lastDamaged = new Map<string, number>();
   private _worldDirty = false;
+  private spectators = new Set<string>();
+  private spectatorNames = new Map<string, string>();
   inventories = new Map<string, Record<string, number>>();
   chests = new Map<number, Record<string, number>>();
   tools = new Map<string, Set<string>>();
@@ -227,11 +229,17 @@ export class WorldRoom extends Room {
 
     this.onMessage("chat", (client, text: string) => {
       const player = this.state.players.get(client.sessionId);
+      const spectatorName = this.spectatorNames.get(client.sessionId);
       const clean = String(text).slice(0, 200).trim();
       if (!clean) return;
+      // TEMP dev command...
 
       // TEMP dev command to test tool-gating before crafting exists — remove later
-      if (process.env.NODE_ENV !== "production" && clean.startsWith("/tool ")) {
+      if (
+        player &&
+        process.env.NODE_ENV !== "production" &&
+        clean.startsWith("/tool ")
+      ) {
         const t = clean.slice(6).trim();
         if (!TOOL_CAPS[t]) {
           client.send("notice", `Unknown tool: ${t}`);
@@ -245,7 +253,10 @@ export class WorldRoom extends Room {
         return;
       }
 
-      this.broadcast("chat", { name: player?.name || "Anon", text: clean });
+      this.broadcast("chat", {
+        name: player?.name ?? spectatorName ?? "Anon",
+        text: clean,
+      });
     });
 
     // send a player their inventory once they're ready to receive it
@@ -312,10 +323,26 @@ export class WorldRoom extends Room {
     options: {
       name?: string;
       characterId?: string;
+      spectator?: boolean;
     },
   ) {
     const requestedName =
       (options?.name || "Anon").trim().slice(0, 16) || "Anon";
+
+    if (options?.spectator) {
+      if (process.env.NODE_ENV === "production") {
+        throw new Error("Spectator mode is disabled in production.");
+      }
+
+      this.spectators.add(client.sessionId);
+      this.spectatorNames.set(client.sessionId, requestedName);
+
+      client.send("spectatorReady", {
+        name: requestedName,
+      });
+
+      return;
+    }
 
     const suppliedCharacterId =
       typeof options?.characterId === "string"
@@ -397,6 +424,11 @@ export class WorldRoom extends Room {
   }
 
   async onLeave(client: Client) {
+    if (this.spectators.has(client.sessionId)) {
+      this.spectators.delete(client.sessionId);
+      this.spectatorNames.delete(client.sessionId);
+      return;
+    }
     const player = this.state.players.get(client.sessionId);
     const characterId = this.characterIds.get(client.sessionId);
     if (player && characterId) {
