@@ -1,9 +1,13 @@
 {
   "name": "MMORPG Dev",
 
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
 
   "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "latest",
+      "pnpmVersion": "latest"
+    },
     "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/devcontainers/features/git-lfs:1": {}
   },
@@ -38,7 +42,7 @@
     }
   },
 
-  "postCreateCommand": "corepack enable && pnpm install --frozen-lockfile",
+  "postCreateCommand": "pnpm install --frozen-lockfile",
 
-  "remoteUser": "node"
+  "remoteUser": "vscode"
 }
