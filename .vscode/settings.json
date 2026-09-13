@@ -16,7 +16,6 @@
   "chat.mcp.access": "all",
   "files.associations": {
     "*.json": "json",
-    
     "*.css": "tailwindcss"
   },
   "github.copilot.enable": {

@@ -1,0 +1,43 @@
+{
+  "name": "MMORPG Dev",
+
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ultram4rine.vscode-choosealicense",
+        "usernamehw.errorlens",
+        "esbenp.prettier-vscode",
+        "prisma.prisma",
+        "bradlc.vscode-tailwindcss",
+        "vscode-icons-team.vscode-icons"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+      }
+    }
+  },
+
+  "forwardPorts": [5173, 2567],
+
+  "portsAttributes": {
+    "5173": {
+      "label": "MMORPG Client",
+      "onAutoForward": "openBrowser"
+    },
+    "2567": {
+      "label": "Colyseus Server",
+      "onAutoForward": "silent"
+    }
+  },
+
+  "postCreateCommand": "corepack enable && pnpm install --frozen-lockfile",
+
+  "remoteUser": "node"
+}
