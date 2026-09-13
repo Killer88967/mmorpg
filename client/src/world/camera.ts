@@ -1,7 +1,7 @@
-// @ts-nocheck
+import type { CameraContext } from "@/types";
 
 // render loop: smooth movement (interpolation) + camera follow
-export function startCamera({ app, world, room, sprites }) {
+export function startCamera({ app, world, room, sprites }: CameraContext) {
   app.ticker.add(() => {
     sprites.forEach((g) => {
       g.x += (g.tx - g.x) * 0.2;

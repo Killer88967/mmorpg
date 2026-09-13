@@ -92,6 +92,11 @@ export type GameContext = {
   closeChat?: () => void;
 };
 
+export type CameraContext = Pick<
+  GameContext,
+  "app" | "world" | "room" | "sprites"
+>;
+
 export type Recipes = Record<string, RecipeObj>;
 export type Items = Record<string, Item>;
 export type PlaceInfo = Record<string, Placeable>;

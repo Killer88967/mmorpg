@@ -1,7 +1,7 @@
-// @ts-nocheck
-import { Graphics } from "pixi.js";
+import { Graphics, type Container } from "pixi.js";
+import type { WorldState } from "@/server/schema/WorldState";
 
-const COLORS = {
+const COLORS: Record<number, number> = {
   0: 0x2e7d32,
   1: 0x1565c0,
   2: 0xb08968,
@@ -12,10 +12,10 @@ const COLORS = {
   7: 0x55564a,
 };
 
-export function createMap(world) {
-  let localTiles = [];
+export function createMap(world: Container) {
+  let localTiles: number[] = [];
   let mapMeta = { cols: 0, rows: 0, tile: 0 };
-  let groundGfx = null;
+  let groundGfx: Graphics | null = null;
   let mapBuilt = false;
 
   function buildMap() {
@@ -31,7 +31,7 @@ export function createMap(world) {
     groundGfx = g;
   }
 
-  function onStateChange(state) {
+  function onStateChange(state: WorldState) {
     if (mapBuilt || state.tiles.length === 0) return;
     mapBuilt = true;
     mapMeta = {
@@ -44,7 +44,7 @@ export function createMap(world) {
   }
 
   // live tile changes (harvested / respawned trees)
-  function onTileUpdate({ index, type }) {
+  function onTileUpdate({ index, type }: { index: number; type: number }) {
     localTiles[index] = type;
     buildMap();
   }
