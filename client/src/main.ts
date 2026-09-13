@@ -28,8 +28,12 @@ async function main() {
 
   const sprites = new Map<string, PlayerSprite>();
 
-  const name = (prompt("Pick a name") || "Anon").slice(0, 16);
-  const { room } = await createRoom(name);
+  const storedCharacterId =
+    localStorage.getItem("mmorpg.characterId") ?? undefined;
+
+  const storedName = localStorage.getItem("mmorpg.characterName");
+  const name = (storedName || prompt("Pick a name") || "Anon").slice(0, 16);
+  const { room } = await createRoom(name, storedCharacterId);
   const $ = Callbacks.get(room);
 
   // shared UI context — mutable state + cross-module handles live here
@@ -50,6 +54,17 @@ async function main() {
   const map = createMap(world);
   room.onStateChange(() => map.onStateChange(room.state));
   room.onMessage("tileUpdate", map.onTileUpdate);
+
+  // ---- Players ----
+  room.onMessage(
+    "identity",
+    (identity: { characterId: string; name: string }) => {
+      localStorage.setItem("mmorpg.characterId", identity.characterId);
+      localStorage.setItem("mmorpg.characterName", identity.name);
+
+      ctx.myName = identity.name;
+    },
+  );
 
   // ---- UI (order matters: later modules reference earlier ones' DOM) ----
   initChat(ctx);

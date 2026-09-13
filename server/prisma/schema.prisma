@@ -7,10 +7,9 @@ datasource db {
   provider = "sqlite"
 }
 
-// Don't migrate until needed to be updated
 model Character {
   id          Int      @id @default(autoincrement())
-  characterId String   @unique
+  characterId String?  @unique
   name        String
   x           Float    @default(300)
   y           Float    @default(300)

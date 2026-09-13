@@ -85,8 +85,8 @@ export function registerTrade(room: WorldRoom) {
       by: buyerName,
     });
 
-    room.saveOne(offer.fromName, sellerInv);
-    room.saveOne(buyerName, buyerInv);
+    room.saveOne(offer.fromId, sellerInv);
+    room.saveOne(client.sessionId, buyerInv);
   });
 
   // cancel your own offer

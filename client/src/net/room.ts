@@ -10,9 +10,13 @@ export const ENDPOINT =
   codespacesEndpoint ??
   "http://localhost:2567";
 
-export async function createRoom(name: string) {
+export async function createRoom(name: string, characterId?: string) {
   const client = new Client(ENDPOINT);
-  const room = await client.joinOrCreate<WorldState>("world", { name });
+
+  const room = await client.joinOrCreate<WorldState>("world", {
+    name,
+    characterId,
+  });
 
   return { client, room };
 }

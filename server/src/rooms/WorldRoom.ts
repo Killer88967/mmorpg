@@ -1,4 +1,5 @@
 import { Room, Client } from "colyseus";
+import { randomBytes } from "node:crypto";
 import { WorldState, Player, Placed } from "@/rooms/schema/WorldState.js";
 import { prisma } from "@/db.js";
 import { TILE, SPEED, WORLD } from "@/game/constants.js";
@@ -20,6 +21,7 @@ export class WorldRoom extends Room {
   state = new WorldState();
   maxClients = 32;
 
+  private characterIds = new Map<string, string>();
   private inputs = new Map<string, Input>();
   private lastDamaged = new Map<string, number>();
   private _worldDirty = false;
@@ -31,11 +33,16 @@ export class WorldRoom extends Room {
 
   private async saveAll() {
     for (const [id, player] of this.state.players) {
+      const characterId = this.characterIds.get(id);
+      if (!characterId) continue;
+
       const inv = this.inventories.get(id) ?? {};
 
       try {
         await prisma.character.update({
-          where: { name: player.name },
+          where: {
+            characterId,
+          },
           data: {
             x: player.x,
             y: player.y,
@@ -49,16 +56,24 @@ export class WorldRoom extends Room {
     }
   }
 
-  async saveOne(name: string, inv: any) {
+  async saveOne(sessionId: string, inv: Record<string, number>) {
+    const characterId = this.characterIds.get(sessionId);
+    if (!characterId) return;
+
     try {
       await prisma.character.update({
-        where: { name },
+        where: {
+          characterId,
+        },
         data: {
           inventory: JSON.stringify(inv),
         },
       });
     } catch (error) {
-      console.error(`Failed to save inventory for "${name}":`, error);
+      console.error(
+        `Failed to save inventory for character "${characterId}":`,
+        error,
+      );
     }
   }
 
@@ -160,11 +175,15 @@ export class WorldRoom extends Room {
 
   async persist(sessionId: string) {
     const player = this.state.players.get(sessionId);
-    if (!player) return;
+    const characterId = this.characterIds.get(sessionId);
+
+    if (!player || !characterId) return;
 
     try {
       await prisma.character.update({
-        where: { name: player.name },
+        where: {
+          characterId,
+        },
         data: {
           inventory: JSON.stringify(this.inventories.get(sessionId) ?? {}),
           tools: JSON.stringify([...(this.tools.get(sessionId) ?? [])]),
@@ -231,6 +250,16 @@ export class WorldRoom extends Room {
 
     // send a player their inventory once they're ready to receive it
     this.onMessage("ready", (client) => {
+      const characterId = this.characterIds.get(client.sessionId);
+      const player = this.state.players.get(client.sessionId);
+
+      if (characterId && player) {
+        client.send("identity", {
+          characterId,
+          name: player.name,
+        });
+      }
+
       client.send("inventory", this.inventories.get(client.sessionId) ?? {});
       client.send("toolsUpdate", [...(this.tools.get(client.sessionId) ?? [])]);
     });
@@ -278,14 +307,59 @@ export class WorldRoom extends Room {
     });
   }
 
-  async onJoin(client: Client, options: { name?: string }) {
-    const name = (options?.name || "Anon").slice(0, 16);
-    const spawn = this.randomSpawn();
-    const record = await prisma.character.upsert({
-      where: { name },
-      update: {},
-      create: { name, x: spawn.x, y: spawn.y, color: randomColor() },
-    });
+  async onJoin(
+    client: Client,
+    options: {
+      name?: string;
+      characterId?: string;
+    },
+  ) {
+    const requestedName =
+      (options?.name || "Anon").trim().slice(0, 16) || "Anon";
+
+    const suppliedCharacterId =
+      typeof options?.characterId === "string"
+        ? options.characterId.trim()
+        : "";
+
+    let record = suppliedCharacterId
+      ? await prisma.character.findUnique({
+          where: {
+            characterId: suppliedCharacterId,
+          },
+        })
+      : null;
+
+    if (!record) {
+      const characterId = randomBytes(32).toString("hex");
+      const spawn = this.randomSpawn();
+
+      record = await prisma.character.create({
+        data: {
+          characterId,
+          name: requestedName,
+          x: spawn.x,
+          y: spawn.y,
+          color: randomColor(),
+        },
+      });
+    }
+
+    // Handles any old/legacy row that somehow has no identity yet.
+    if (!record.characterId) {
+      const characterId = randomBytes(32).toString("hex");
+
+      record = await prisma.character.update({
+        where: {
+          id: record.id,
+        },
+        data: {
+          characterId,
+        },
+      });
+    }
+
+    this.characterIds.set(client.sessionId, record.characterId);
 
     const player = new Player();
     player.x = record.x;
@@ -317,11 +391,14 @@ export class WorldRoom extends Room {
 
   async onLeave(client: Client) {
     const player = this.state.players.get(client.sessionId);
-    if (player) {
+    const characterId = this.characterIds.get(client.sessionId);
+    if (player && characterId) {
       const inv = this.inventories.get(client.sessionId) ?? {};
       try {
         await prisma.character.update({
-          where: { name: player.name },
+          where: {
+            characterId,
+          },
           data: {
             x: player.x,
             y: player.y,
@@ -349,5 +426,6 @@ export class WorldRoom extends Room {
     this.lastDamaged.delete(client.sessionId);
     this.tools.delete(client.sessionId);
     this.inventories.delete(client.sessionId);
+    this.characterIds.delete(client.sessionId);
   }
 }
