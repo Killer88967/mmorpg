@@ -7,15 +7,17 @@ datasource db {
   provider = "sqlite"
 }
 
+// Don't migrate until needed to be updated
 model Character {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  x         Float    @default(300)
-  y         Float    @default(300)
-  color     String   @default("#ffffff")
-  inventory String   @default("{}")
-  tools     String   @default("[]")
-  updatedAt DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  characterId String   @unique
+  name        String
+  x           Float    @default(300)
+  y           Float    @default(300)
+  color       String   @default("#ffffff")
+  inventory   String   @default("{}")
+  tools       String   @default("[]")
+  updatedAt   DateTime @updatedAt
 }
 
 model WorldData {
