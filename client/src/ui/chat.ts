@@ -11,6 +11,10 @@ export function initChat(ctx: GameContext) {
   ctx.openOffers = 0;
 
   const ITEM_RE = /\{([a-zA-Z][a-zA-Z0-9_]*)(?:::(\d+))?\}/g;
+  const CHAT_TOKEN_RE =
+    /(\{[a-zA-Z][a-zA-Z0-9_]*(?:::\d+)?\}|@[a-zA-Z0-9_]+|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
+  const ITEM_TOKEN_RE = /^\{([a-zA-Z][a-zA-Z0-9_]*)(?:::(\d+))?\}$/;
+  const MENTION_RE = /^@([a-zA-Z0-9_]+)$/;
 
   function makeItemChip(item: string, count: number) {
     const def = ITEM_DB[item] || { name: item, color: "#9fb0c3", icon: "📦" };
@@ -32,23 +36,86 @@ export function initChat(ctx: GameContext) {
     return chip;
   }
 
-  function appendText(line, text: string) {
-    let last = 0,
-      m;
-    ITEM_RE.lastIndex = 0;
-    while ((m = ITEM_RE.exec(text))) {
-      if (m.index > last)
-        line.appendChild(document.createTextNode(text.slice(last, m.index)));
-      line.appendChild(
-        makeItemChip(
-          m[1].toLowerCase(),
-          m[2] !== undefined ? parseInt(m[2], 10) : null,
-        ),
-      );
-      last = m.index + m[0].length;
+  function appendText(line: HTMLElement, text: string) {
+    let last: number = 0;
+
+    for (const match of text.matchAll(CHAT_TOKEN_RE)) {
+      const token = match[0];
+      const index = match.index ?? 0;
+
+      if (index > last) {
+        line.appendChild(document.createTextNode(text.slice(last, index)));
+      }
+
+      const itemMatch = token.match(ITEM_TOKEN_RE);
+
+      if (itemMatch) {
+        line.appendChild(
+          makeItemChip(
+            itemMatch[1].toLowerCase(),
+            itemMatch[2] !== undefined ? parseInt(itemMatch[2], 10) : null,
+          ),
+        );
+
+        last = index + token.length;
+        continue;
+      }
+
+      const mentionMatch = token.match(MENTION_RE);
+
+      if (mentionMatch) {
+        const mention = document.createElement("span");
+
+        mention.className =
+          mentionMatch[1].toLowerCase() === ctx.myName.toLowerCase()
+            ? "chat-mention is-self"
+            : "chat-mention";
+
+        mention.textContent = token;
+
+        line.appendChild(mention);
+
+        last = index + token.length;
+        continue;
+      }
+
+      if (token.startsWith("**")) {
+        const bold = document.createElement("strong");
+        bold.className = "chat-bold";
+        bold.textContent = token.slice(2, -2);
+
+        line.appendChild(bold);
+
+        last = index + token.length;
+        continue;
+      }
+
+      if (token.startsWith("*")) {
+        const italic = document.createElement("em");
+        italic.className = "chat-italic";
+        italic.textContent = token.slice(1, -1);
+
+        line.appendChild(italic);
+
+        last = index + token.length;
+        continue;
+      }
+
+      if (token.startsWith("`")) {
+        const code = document.createElement("code");
+        code.className = "chat-code";
+        code.textContent = token.slice(1, -1);
+
+        line.appendChild(code);
+
+        last = index + token.length;
+        continue;
+      }
     }
-    if (last < text.length)
+
+    if (last < text.length) {
       line.appendChild(document.createTextNode(text.slice(last)));
+    }
   }
 
   function expandItemTokens(text: string) {

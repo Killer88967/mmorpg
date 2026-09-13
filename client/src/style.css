@@ -129,6 +129,36 @@ canvas {
   cursor: pointer;
 }
 
+/* --- Chat Syntax Styles --- */
+.chat-mention {
+  font-weight: 700;
+  color: #9fb0c3;
+}
+
+.chat-mention.is-self {
+  color: #ffd166;
+}
+
+.chat-bold {
+  font-weight: 800;
+  color: #fff;
+}
+
+.chat-italic {
+  font-style: italic;
+}
+
+.chat-code {
+  padding: 1px 5px;
+  margin: 0 1px;
+  font-family: monospace;
+  font-size: 0.92em;
+  color: #d8dee9;
+  background: rgba(0, 0, 0, 0, 35);
+  border: 1px solid #3a4050;
+  border-radius: 4px;
+}
+
 /* --- item tooltip --- */
 .item-tooltip {
   position: fixed;
