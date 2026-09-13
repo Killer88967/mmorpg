@@ -16,10 +16,11 @@ import { registerChest } from "@/handlers/chest.js";
 import { isBlocked } from "@/game/building.js";
 
 type Input = { up: boolean; down: boolean; left: boolean; right: boolean };
+const MAX_PLAYERS = 32;
 
 export class WorldRoom extends Room {
   state = new WorldState();
-  maxClients = 32;
+  maxClients = 40;
 
   private characterIds = new Map<string, string>();
   private inputs = new Map<string, Input>();
@@ -232,7 +233,6 @@ export class WorldRoom extends Room {
       const spectatorName = this.spectatorNames.get(client.sessionId);
       const clean = String(text).slice(0, 200).trim();
       if (!clean) return;
-      // TEMP dev command...
 
       // TEMP dev command to test tool-gating before crafting exists — remove later
       if (
@@ -342,6 +342,10 @@ export class WorldRoom extends Room {
       });
 
       return;
+    }
+
+    if (this.state.players.size >= MAX_PLAYERS) {
+      throw new Error("World is full.");
     }
 
     const suppliedCharacterId =
