@@ -4,6 +4,10 @@
     "module": "esnext",
     "lib": ["ES2023", "DOM"],
     "types": ["vite/client", "node"],
+
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
 

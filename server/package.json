@@ -9,11 +9,10 @@
   },
   "scripts": {
     "start": "tsx watch src/index.ts",
-    "loadtest": "tsx loadtest/example.ts --room my_room --numClients 2",
+    "loadtest": "tsx loadtest/example.ts --room world --numClients 2",
     "build": "pnpm clean && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "clean": "rimraf build",
-    "test": "mocha -r tsx test/**.test.ts --exit --timeout 15000"
+    "clean": "rimraf build"
   },
   "dependencies": {
     "@colyseus/schema": "^4.0.0",
