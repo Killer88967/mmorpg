@@ -1,13 +1,18 @@
-// @ts-nocheck
-export function initHud(ctx) {
+import type { GameContext } from "@/types";
+
+export function initHud(ctx: GameContext) {
   const room = ctx.room;
 
   const wrap = document.createElement("div");
   wrap.className = "hud-health";
   wrap.innerHTML = `<div class="hud-health-fill"></div><span class="hud-health-text"></span>`;
   document.body.appendChild(wrap);
-  const fill = wrap.querySelector(".hud-health-fill");
-  const text = wrap.querySelector(".hud-health-text");
+  const fill = wrap.querySelector<HTMLDivElement>(".hud-health-fill");
+  const text = wrap.querySelector<HTMLSpanElement>(".hud-health-text");
+
+  if (!fill || !text) {
+    throw new Error("Failed to create HUD health elements.");
+  }
 
   const flash = document.createElement("div");
   flash.className = "hurt-flash";

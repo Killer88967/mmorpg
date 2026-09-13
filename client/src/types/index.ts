@@ -74,7 +74,7 @@ export type GameContext = {
   world: Container;
   sprites: Map<string, PlayerSprite>;
 
-  $: ReturnType<typeof Callbacks.get>;
+  $: ReturnType<typeof Callbacks.get<WorldState>>;
 
   setHp?: (hp: number, maxHp: number) => void;
 
@@ -96,6 +96,8 @@ export type CameraContext = Pick<
   GameContext,
   "app" | "world" | "room" | "sprites"
 >;
+
+export type PlacedContext = Pick<GameContext, "world" | "room" | "$">;
 
 export type Recipes = Record<string, RecipeObj>;
 export type Items = Record<string, Item>;
