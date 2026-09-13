@@ -1,11 +1,12 @@
-// @ts-nocheck
-import { Graphics, Container, Text } from "pixi.js";
+import { Graphics, Container, Text, type Ticker } from "pixi.js";
 import { MOB_COLORS } from "@/data/mobs";
+import type { MobContext, MobSprite } from "@/types";
+import type { Mob } from "@/server/schema/WorldState";
 
-export function initMobs({ app, world, room, $ }) {
-  const mobSprites = new Map();
+export function initMobs({ app, world, room, $ }: MobContext) {
+  const mobSprites = new Map<string, MobSprite>();
 
-  function floatText(x, y, str, color) {
+  function floatText(x: number, y: number, str: string, color: number) {
     const t = new Text({
       text: str,
       style: {
@@ -20,7 +21,7 @@ export function initMobs({ app, world, room, $ }) {
     t.y = y;
     world.addChild(t);
     let life = 0;
-    const tick = (ticker) => {
+    const tick = (ticker: Ticker) => {
       const dt = ticker.deltaMS ?? 16;
       life += dt;
       t.y -= dt * 0.03;
@@ -33,8 +34,8 @@ export function initMobs({ app, world, room, $ }) {
     app.ticker.add(tick);
   }
 
-  $.onAdd("mobs", (mob, id) => {
-    const c = new Container();
+  $.onAdd("mobs", (mob: Mob, id: string) => {
+    const c = new Container() as MobSprite;
     c.x = mob.x;
     c.y = mob.y;
     c.tx = mob.x;
@@ -58,9 +59,9 @@ export function initMobs({ app, world, room, $ }) {
     world.addChild(c);
     mobSprites.set(id, c);
 
-    $.listen(mob, "x", (v) => (c.tx = v));
-    $.listen(mob, "y", (v) => (c.ty = v));
-    $.listen(mob, "hp", (v) => {
+    $.listen(mob, "x", (v: number) => (c.tx = v));
+    $.listen(mob, "y", (v: number) => (c.ty = v));
+    $.listen(mob, "hp", (v: number) => {
       const frac = Math.max(0, Math.min(1, v / c._maxHp));
       c._bar
         .clear()
@@ -69,23 +70,26 @@ export function initMobs({ app, world, room, $ }) {
     });
   });
 
-  $.onRemove("mobs", (_mob, id) => {
+  $.onRemove("mobs", (_mob: Mob, id: string) => {
     mobSprites.get(id)?.destroy();
     mobSprites.delete(id);
   });
 
-  room.onMessage("combatHit", ({ id, dmg, x, y }) => {
-    const c = mobSprites.get(id);
-    if (c && c._body) {
-      c._body.tint = 0xff6666;
-      setTimeout(() => {
-        if (c._body) c._body.tint = 0xffffff;
-      }, 90);
-    }
-    floatText(x, y - 20, "-" + dmg, 0xff5353);
-  });
+  room.onMessage(
+    "combatHit",
+    ({ id, dmg, x, y }: { id: string; dmg: number; x: number; y: number }) => {
+      const c = mobSprites.get(id);
+      if (c) {
+        c._body.tint = 0xff6666;
+        setTimeout(() => {
+          if (c._body) c._body.tint = 0xffffff;
+        }, 90);
+      }
+      floatText(x, y - 20, "-" + dmg, 0xff5353);
+    },
+  );
 
-  room.onMessage("mobKilled", ({ x, y }) => {
+  room.onMessage("mobKilled", ({ x, y }: { x: number; y: number }) => {
     floatText(x, y - 10, "💀", 0xffffff);
   });
 

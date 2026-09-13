@@ -55,6 +55,14 @@ export type PlayerSprite = Graphics & {
   ty: number;
 };
 
+export type MobSprite = Container & {
+  tx: number;
+  ty: number;
+  _body: Graphics;
+  _bar: Graphics;
+  _maxHp: number;
+};
+
 export type GameContext = {
   room: Room<WorldState>;
   myName: string;
@@ -108,6 +116,8 @@ export type CameraContext = Pick<
 >;
 
 export type PlacedContext = Pick<GameContext, "world" | "room" | "$">;
+
+export type MobContext = Pick<GameContext, "app" | "world" | "room" | "$">;
 
 export type Recipes = Record<string, RecipeObj>;
 export type Items = Record<string, Item>;
