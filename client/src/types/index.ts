@@ -8,7 +8,7 @@ export type Item = {
   icon: string;
   color: string;
   rarity: "common" | "uncommon" | "rare" | "epic" | "legendary";
-  type: "Material" | "Tool" | "Weapon" | "Block";
+  type: "Material" | "Tool" | "Weapon" | "Block" | "Station";
   stats?: Record<string, string | number>;
   desc: string;
 };

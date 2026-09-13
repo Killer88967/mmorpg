@@ -1,6 +1,5 @@
 import type { RecipeArray } from "@/types";
 
-// @ts-nocheck
 export const RECIPES: RecipeArray = [
   {
     id: "sticks",

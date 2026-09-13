@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Items } from "@/types";
 
 // ---- item database: what each item IS (drives chips + tooltips) ----
