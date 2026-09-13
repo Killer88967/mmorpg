@@ -76,7 +76,9 @@ export class WorldRoom extends Room {
     let arr: any[] = [];
     try {
       arr = JSON.parse(row.placed || "[]");
-    } catch {}
+    } catch (error) {
+      console.error("Failed to parse placed world data:", error);
+    }
     for (const o of arr) {
       if (typeof o?.index !== "number") continue;
       const p = new Placed();
@@ -87,9 +89,12 @@ export class WorldRoom extends Room {
     }
     try {
       const chestObj = JSON.parse(row.chests || "{}");
-      for (const [k, v] of Object.entries(chestObj))
-        this.chests.set(Number(k), v as any);
-    } catch {}
+      for (const [k, v] of Object.entries(chestObj)) {
+        this.chests.set(Number(k), v as Record<string, number>);
+      }
+    } catch (error) {
+      console.error("Failed to parse chest world data:", error);
+    }
   }
 
   async saveWorld(): Promise<void> {
@@ -207,7 +212,7 @@ export class WorldRoom extends Room {
       if (!clean) return;
 
       // TEMP dev command to test tool-gating before crafting exists — remove later
-      if (clean.startsWith("/tool ")) {
+      if (process.env.NODE_ENV !== "production" && clean.startsWith("/tool ")) {
         const t = clean.slice(6).trim();
         if (!TOOL_CAPS[t]) {
           client.send("notice", `Unknown tool: ${t}`);
@@ -291,11 +296,15 @@ export class WorldRoom extends Room {
     let inv: Record<string, number> = {};
     try {
       inv = JSON.parse(record.inventory || "{}");
-    } catch {}
+    } catch (error) {
+      console.error(`Failed to parse inventory for "${record.name}":`, error);
+    }
     let toolset: string[] = [];
     try {
       toolset = JSON.parse(record.tools || "[]");
-    } catch {}
+    } catch (error) {
+      console.error(`Failed to parse tools for "${record.name}":`, error);
+    }
     this.tools.set(client.sessionId, new Set(toolset));
     this.inventories.set(client.sessionId, inv);
     this.inputs.set(client.sessionId, {
