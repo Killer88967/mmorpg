@@ -330,6 +330,27 @@ export class WorldRoom extends Room {
         })
       : null;
 
+    // Temporary migration bridge for characters created before characterId existed.
+    if (!record && !suppliedCharacterId) {
+      const legacyRecord = await prisma.character.findFirst({
+        where: {
+          name: requestedName,
+          characterId: null,
+        },
+      });
+
+      if (legacyRecord) {
+        record = await prisma.character.update({
+          where: {
+            id: legacyRecord.id,
+          },
+          data: {
+            characterId: randomBytes(32).toString("hex"),
+          },
+        });
+      }
+    }
+
     if (!record) {
       const characterId = randomBytes(32).toString("hex");
       const spawn = this.randomSpawn();
@@ -341,20 +362,6 @@ export class WorldRoom extends Room {
           x: spawn.x,
           y: spawn.y,
           color: randomColor(),
-        },
-      });
-    }
-
-    // Handles any old/legacy row that somehow has no identity yet.
-    if (!record.characterId) {
-      const characterId = randomBytes(32).toString("hex");
-
-      record = await prisma.character.update({
-        where: {
-          id: record.id,
-        },
-        data: {
-          characterId,
         },
       });
     }
