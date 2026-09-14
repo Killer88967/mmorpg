@@ -1,12 +1,12 @@
-// @ts-nocheck
 import { Graphics } from "pixi.js";
 import { PLACE_INFO } from "@/data/placeables";
+import type { Context, TilePos } from "@/types";
 
-export function initBuild(ctx) {
+export function initBuild(ctx: Context.GameContext) {
   const { app, world, room } = ctx;
-  let selected = null;
+  let selected: string | null = null;
   let breakMode = false;
-  let hover = null;
+  let hover: TilePos | null = null;
 
   const bar = document.createElement("div");
   bar.className = "build-bar";
@@ -55,7 +55,7 @@ export function initBuild(ctx) {
   const T = () => room.state.tile || 64;
   const C = () => room.state.cols || 32;
 
-  function tileFromEvent(e) {
+  function tileFromEvent(e: PointerEvent): TilePos {
     const rect = app.canvas.getBoundingClientRect();
     const sx = e.clientX - rect.left,
       sy = e.clientY - rect.top;
@@ -64,11 +64,11 @@ export function initBuild(ctx) {
       r: Math.floor((sy - world.y) / T()),
     };
   }
-  function playerTile() {
+  function playerTile(): TilePos | null {
     const p = room.state.players.get(room.sessionId);
     return p ? { c: Math.floor(p.x / T()), r: Math.floor(p.y / T()) } : null;
   }
-  function inRange(t) {
+  function inRange(t: TilePos): boolean | null {
     const pt = playerTile();
     return pt && Math.abs(t.c - pt.c) <= 3 && Math.abs(t.r - pt.r) <= 3;
   }

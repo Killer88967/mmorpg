@@ -63,6 +63,11 @@ export type MobSprite = Container & {
   _maxHp: number;
 };
 
+export type TilePos = {
+  c: number;
+  r: number;
+};
+
 export type GameContext = {
   room: Room<WorldState>;
   myName: string;
@@ -108,6 +113,9 @@ export type GameContext = {
 
   closeInv?: () => void;
   toggleInv?: () => void;
+
+  refreshBuild?: () => void;
+  openChest?: (index: number) => void;
 };
 
 export type CameraContext = Pick<
@@ -122,3 +130,15 @@ export type MobContext = Pick<GameContext, "app" | "world" | "room" | "$">;
 export type Recipes = Record<string, RecipeObj>;
 export type Items = Record<string, Item>;
 export type PlaceInfo = Record<string, Placeable>;
+
+type _GameContext = GameContext;
+type _CameraContext = CameraContext;
+type _PlacedContext = PlacedContext;
+type _MobContext = MobContext;
+
+export namespace Context {
+  export type GameContext = _GameContext;
+  export type CameraContext = _CameraContext;
+  export type PlacedContext = _PlacedContext;
+  export type MobContext = _MobContext;
+}
