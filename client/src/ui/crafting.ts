@@ -1,12 +1,12 @@
-// @ts-nocheck
 import { ITEM_DB } from "@/data/items";
 import { RECIPES } from "@/data/recipes";
 import { formatAmount } from "@/util/format";
+import type { Context, Recipe } from "@/types";
 
 // crafting modal (key C or hammer button). Shared state via `ctx`.
-export function initCrafting(ctx) {
+export function initCrafting(ctx: Context.CraftingContext) {
   const room = ctx.room;
-  ctx.myTools = ctx.myTools ?? [];
+  ctx.myTools ??= [];
 
   const craftButton = document.createElement("button");
   craftButton.className = "craft-button";
@@ -23,28 +23,32 @@ export function initCrafting(ctx) {
     `<div class="craft-list"></div></div>`;
   document.body.appendChild(modal);
 
-  const list = modal.querySelector(".craft-list");
+  const list = modal.querySelector<HTMLDivElement>(".craft-list");
+  const closeButton = modal.querySelector<HTMLButtonElement>(".craft-close");
+  if (!list || !closeButton) throw new Error("Failed to create crafting UI.");
+  const l = list;
+  const cB = closeButton;
   const isOpen = () => modal.classList.contains("is-open");
 
-  function canAfford(recipe) {
+  function canAfford(recipe: Recipe): boolean {
     for (const [item, count] of Object.entries(recipe.inputs))
       if ((ctx.myInventory[item] ?? 0) < count) return false;
     return true;
   }
 
-  function owned(recipe) {
+  function owned(recipe: Recipe): boolean {
     return (
       recipe.output.kind === "tool" && ctx.myTools.includes(recipe.output.tool)
     );
   }
 
-  function outDef(recipe) {
+  function outDef(recipe: Recipe) {
     const key =
       recipe.output.kind === "tool" ? recipe.output.tool : recipe.output.item;
     return ITEM_DB[key] || { name: recipe.name, icon: "📦", color: "#9fb0c3" };
   }
 
-  function nearStation(kind) {
+  function nearStation(kind: string): boolean {
     const me = room.state.players.get(room.sessionId);
     if (!me) return false;
     const T = room.state.tile || 64,
@@ -62,7 +66,7 @@ export function initCrafting(ctx) {
   }
 
   function render() {
-    list.innerHTML = "";
+    l.innerHTML = "";
     for (const recipe of RECIPES) {
       const def = outDef(recipe);
       const row = document.createElement("div");
@@ -92,7 +96,9 @@ export function initCrafting(ctx) {
       }
       row.append(costs);
 
-      const needsStation = recipe.station && !nearStation(recipe.station);
+      const station =
+        typeof recipe.station === "string" ? recipe.station : undefined;
+      const needsStation = station !== undefined && !nearStation(station);
       const btn = document.createElement("button");
       btn.className = "craft-do";
       if (owned(recipe)) {
@@ -101,7 +107,7 @@ export function initCrafting(ctx) {
       } else if (needsStation) {
         btn.textContent = "Needs 🔥 nearby";
         btn.disabled = true;
-        btn.title = `Stand near a ${recipe.station}`;
+        btn.title = `Stand near a ${station}`;
       } else if (!canAfford(recipe)) {
         btn.textContent = "Craft";
         btn.disabled = true;
@@ -110,30 +116,37 @@ export function initCrafting(ctx) {
         btn.onclick = () => room.send("craft", { id: recipe.id });
       }
       row.append(btn);
-      list.append(row);
+      l.append(row);
     }
   }
 
-  let stationTimer = null;
+  let stationTimer: ReturnType<typeof setInterval> | undefined;
   function openCrafting() {
     render();
     modal.classList.add("is-open");
-    clearInterval(stationTimer);
-    stationTimer = setInterval(render, 500); // station availability updates as you move
+    clearStationTimer();
+    stationTimer = setInterval(render, 500);
   }
 
   function closeCrafting() {
     modal.classList.remove("is-open");
-    clearInterval(stationTimer);
+    clearStationTimer();
+  }
+
+  function clearStationTimer() {
+    if (stationTimer !== undefined) {
+      clearInterval(stationTimer);
+      stationTimer = undefined;
+    }
   }
 
   craftButton.onclick = () => (isOpen() ? closeCrafting() : openCrafting());
-  modal.querySelector(".craft-close").onclick = closeCrafting;
+  cB.onclick = closeCrafting;
   modal.addEventListener("click", (e) => {
     if (e.target === modal) closeCrafting();
   });
 
-  room.onMessage("toolsUpdate", (tools) => {
+  room.onMessage("toolsUpdate", (tools: string[]) => {
     ctx.myTools = tools;
     if (isOpen()) render();
   });

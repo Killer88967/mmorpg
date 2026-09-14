@@ -1,6 +1,6 @@
-import type { RecipeArray } from "@/types";
+import type { Recipe } from "@/types";
 
-export const RECIPES: RecipeArray = [
+export const RECIPES: Recipe[] = [
   {
     id: "sticks",
     name: "Sticks",

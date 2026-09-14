@@ -17,7 +17,7 @@ export type Recipe = {
   id: string;
   name: string;
   inputs: Record<string, number>;
-  station?: string | Record<string, number>;
+  station?: string;
   output:
     | {
         kind: "item";
@@ -60,6 +60,7 @@ export type GameContext = {
   room: Room<WorldState>;
   myName: string;
   myInventory: Record<string, number>;
+  myTools: string[];
 
   held: {
     up: boolean;
@@ -191,7 +192,17 @@ export type TradeContext = Pick<
   | "closeTradeModal"
 >;
 
-export type RecipeArray = Recipe[];
+export type CraftingContext = Pick<
+  GameContext,
+  | "room"
+  | "myInventory"
+  | "myTools"
+  | "openCrafting"
+  | "closeCrafting"
+  | "craftModalIsOpen"
+  | "refreshCrafting"
+>;
+
 export type Recipes = Record<string, Recipe>;
 export type Items = Record<string, Item>;
 export type PlaceInfo = Record<string, Placeable>;
@@ -205,6 +216,7 @@ type _InventoryContext = InventoryContext;
 type _TooltipContext = TooltipContext;
 type _ContextMenuContext = ContextMenuContext;
 type _TradeContext = TradeContext;
+type _CraftingContext = CraftingContext;
 
 export namespace Context {
   export type GameContext = _GameContext;
@@ -216,6 +228,7 @@ export namespace Context {
   export type TooltipContext = _TooltipContext;
   export type ContextMenuContext = _ContextMenuContext;
   export type TradeContext = _TradeContext;
+  export type CraftingContext = _CraftingContext;
 }
 
 export namespace ChestTypes {

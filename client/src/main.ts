@@ -41,6 +41,7 @@ async function main() {
     room,
     myName: name,
     myInventory: {},
+    myTools: [],
     held: { up: false, down: false, left: false, right: false },
     chatOpen: false,
     invOpen: false,
