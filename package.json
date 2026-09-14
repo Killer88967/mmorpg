@@ -6,7 +6,8 @@
     "server": "pnpm --filter server start",
     "dev": "concurrently \"pnpm client\" \"pnpm server\"",
     "build": "pnpm -r build",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "db:gen": "pnpm --filter server db:gen"
   },
   "devDependencies": {
     "concurrently": "latest"

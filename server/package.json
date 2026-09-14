@@ -12,7 +12,8 @@
     "loadtest": "tsx loadtest/example.ts --room world --numClients 2",
     "build": "pnpm clean && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "clean": "rimraf build"
+    "clean": "rimraf build",
+    "db:gen": "pnpm prisma generate"
   },
   "dependencies": {
     "@colyseus/schema": "^4.0.0",
