@@ -119,6 +119,7 @@ export type GameContext = {
   showTooltip?: (chip: HTMLElement) => void;
 
   openTradeModal?: (item?: string) => void;
+  closeTradeModal?: () => void;
 };
 
 export type CameraContext = Pick<
@@ -179,6 +180,17 @@ export type ContextMenuContext = Pick<
   | "closeCtxMenu"
 >;
 
+export type TradeContext = Pick<
+  GameContext,
+  | "room"
+  | "myInventory"
+  | "appendSystem"
+  | "invModal"
+  | "closeInv"
+  | "openTradeModal"
+  | "closeTradeModal"
+>;
+
 export type RecipeArray = Recipe[];
 export type Recipes = Record<string, Recipe>;
 export type Items = Record<string, Item>;
@@ -192,6 +204,7 @@ type _ChestContext = ChestContext;
 type _InventoryContext = InventoryContext;
 type _TooltipContext = TooltipContext;
 type _ContextMenuContext = ContextMenuContext;
+type _TradeContext = TradeContext;
 
 export namespace Context {
   export type GameContext = _GameContext;
@@ -202,6 +215,7 @@ export namespace Context {
   export type InventoryContext = _InventoryContext;
   export type TooltipContext = _TooltipContext;
   export type ContextMenuContext = _ContextMenuContext;
+  export type TradeContext = _TradeContext;
 }
 
 export namespace ChestTypes {
@@ -220,5 +234,16 @@ export namespace ContextMenuTypes {
     label: string;
     danger?: boolean;
     disabled?: boolean;
+  };
+}
+
+export namespace TradeTypes {
+  export type TradeItem = {
+    item: string;
+    count: number;
+  };
+  export type OfferPayload = {
+    give: TradeItem;
+    want?: TradeItem;
   };
 }
