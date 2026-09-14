@@ -13,7 +13,7 @@ export type Item = {
   desc: string;
 };
 
-export type RecipeArray = {
+export type Recipe = {
   id: string;
   name: string;
   inputs: Record<string, number>;
@@ -29,18 +29,6 @@ export type RecipeArray = {
         tool: string;
         count?: number;
       };
-}[];
-
-export type RecipeObj = {
-  id: string;
-  name: string;
-  inputs: Record<string, number>;
-  output: {
-    kind: "item" | "tool";
-    item?: string;
-    tool?: string;
-    count?: number;
-  };
 };
 
 export type Placeable = {
@@ -127,7 +115,8 @@ export type PlacedContext = Pick<GameContext, "world" | "room" | "$">;
 
 export type MobContext = Pick<GameContext, "app" | "world" | "room" | "$">;
 
-export type Recipes = Record<string, RecipeObj>;
+export type RecipeArray = Recipe[];
+export type Recipes = Record<string, Recipe>;
 export type Items = Record<string, Item>;
 export type PlaceInfo = Record<string, Placeable>;
 

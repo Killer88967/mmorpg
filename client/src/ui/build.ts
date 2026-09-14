@@ -68,8 +68,9 @@ export function initBuild(ctx: Context.GameContext) {
     const p = room.state.players.get(room.sessionId);
     return p ? { c: Math.floor(p.x / T()), r: Math.floor(p.y / T()) } : null;
   }
-  function inRange(t: TilePos): boolean | null {
+  function inRange(t: TilePos): boolean {
     const pt = playerTile();
+    if (!pt) return false;
     return pt && Math.abs(t.c - pt.c) <= 3 && Math.abs(t.r - pt.r) <= 3;
   }
   function drawGhost() {
