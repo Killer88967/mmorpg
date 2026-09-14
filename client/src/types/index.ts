@@ -82,6 +82,8 @@ export type GameContext = {
   chatLog?: HTMLDivElement;
   chatInput?: HTMLInputElement;
   ctxMenu?: HTMLDivElement;
+  invModal?: HTMLDivElement;
+  invGrid?: HTMLDivElement;
 
   makeItemChip?: (item: string, count: number | null) => HTMLSpanElement;
 
@@ -98,13 +100,18 @@ export type GameContext = {
   craftModalIsOpen?: () => boolean;
   openCrafting?: () => void;
   closeCrafting?: () => void;
+  refreshCrafting?: () => void;
 
   closeInv?: () => void;
   toggleInv?: () => void;
+  renderInvGrid?: () => void;
+  openInv?: () => void;
 
   refreshBuild?: () => void;
   openChest?: (index: number) => void;
   refreshChest?: () => void;
+
+  hideTooltip?: () => void;
 };
 
 export type CameraContext = Pick<
@@ -121,6 +128,23 @@ export type ChestContext = Pick<
   "room" | "myInventory" | "openChest" | "refreshChest"
 >;
 
+export type InventoryContext = Pick<
+  GameContext,
+  | "room"
+  | "myInventory"
+  | "invOpen"
+  | "refreshCrafting"
+  | "refreshBuild"
+  | "refreshChest"
+  | "hideTooltip"
+  | "invModal"
+  | "invGrid"
+  | "renderInvGrid"
+  | "openInv"
+  | "closeInv"
+  | "toggleInv"
+>;
+
 export type RecipeArray = Recipe[];
 export type Recipes = Record<string, Recipe>;
 export type Items = Record<string, Item>;
@@ -131,6 +155,7 @@ type _CameraContext = CameraContext;
 type _PlacedContext = PlacedContext;
 type _MobContext = MobContext;
 type _ChestContext = ChestContext;
+type _InventoryContext = InventoryContext;
 
 export namespace Context {
   export type GameContext = _GameContext;
@@ -138,6 +163,7 @@ export namespace Context {
   export type PlacedContext = _PlacedContext;
   export type MobContext = _MobContext;
   export type ChestContext = _ChestContext;
+  export type InventoryContext = _InventoryContext;
 }
 
 export namespace ChestTypes {

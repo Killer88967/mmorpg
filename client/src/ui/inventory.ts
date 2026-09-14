@@ -1,9 +1,9 @@
-// @ts-nocheck
 import { ITEM_DB } from "@/data/items";
 import { formatAmount } from "@/util/format";
+import type { Context } from "@/types";
 
 // inventory side-panel + full-screen bag modal. Shared state via `ctx`.
-export function initInventory(ctx) {
+export function initInventory(ctx: Context.InventoryContext) {
   const room = ctx.room;
 
   // ---- inventory panel (your own only) ----
@@ -11,7 +11,7 @@ export function initInventory(ctx) {
   invPanel.className = "inv-panel";
   document.body.appendChild(invPanel);
 
-  function renderInventory(inv) {
+  function renderInventory(inv: Record<string, number>) {
     const entries = Object.entries(inv).filter(([, n]) => n > 0);
     invPanel.innerHTML =
       `<div class="inv-title">Inventory</div>` +
@@ -25,7 +25,7 @@ export function initInventory(ctx) {
         : `<div class="inv-empty">empty</div>`);
   }
   renderInventory({});
-  room.onMessage("inventory", (inv) => {
+  room.onMessage("inventory", (inv: Record<string, number>) => {
     ctx.myInventory = inv;
     renderInventory(inv);
     if (ctx.invOpen) renderInvGrid();
@@ -52,9 +52,18 @@ export function initInventory(ctx) {
     `</div><div class="inv-grid"></div></div>`;
   document.body.appendChild(invModal);
 
-  const invGrid = invModal.querySelector(".inv-grid");
+  const invGrid = invModal.querySelector<HTMLDivElement>(".inv-grid");
+  const closeButton =
+    invModal.querySelector<HTMLButtonElement>(".inv-modal-close");
+
+  if (!invGrid || !closeButton) {
+    throw new Error("Failed to craete inventory UI.");
+  }
 
   function renderInvGrid() {
+    if (!invGrid) {
+      throw new Error("Failed to find the UI components.");
+    }
     const entries = Object.entries(ctx.myInventory).filter(([, n]) => n > 0);
     invGrid.innerHTML = "";
     if (!entries.length) {
@@ -87,14 +96,14 @@ export function initInventory(ctx) {
   function closeInv() {
     ctx.invOpen = false;
     invModal.classList.remove("is-open");
-    ctx.hideTooltip();
+    ctx.hideTooltip?.();
   }
   function toggleInv() {
     ctx.invOpen ? closeInv() : openInv();
   }
 
   bagButton.onclick = toggleInv;
-  invModal.querySelector(".inv-modal-close").onclick = closeInv;
+  closeButton.onclick = closeInv;
   invModal.addEventListener("click", (e) => {
     if (e.target === invModal) closeInv(); // click the backdrop to close
   });
