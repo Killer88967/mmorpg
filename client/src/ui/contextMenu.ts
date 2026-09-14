@@ -26,7 +26,6 @@ export function initContextMenu(ctx: Context.ContextMenuContext) {
   function openCtxMenu(item: string, x: number, y: number) {
     ctxMenu.innerHTML = "";
     for (const a of SLOT_ACTIONS) {
-      if (!a.label || !a.danger || !a.disabled) return;
       const b = document.createElement("button");
       b.className =
         "ctx-item" +

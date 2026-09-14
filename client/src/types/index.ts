@@ -217,7 +217,7 @@ export namespace ContextMenuTypes {
   export type SlotActionId = "link" | "trade" | "craft" | "discard";
   export type SlotAction = {
     id: SlotActionId;
-    label?: string;
+    label: string;
     danger?: boolean;
     disabled?: boolean;
   };
