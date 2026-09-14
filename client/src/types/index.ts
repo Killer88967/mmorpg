@@ -104,6 +104,7 @@ export type GameContext = {
 
   refreshBuild?: () => void;
   openChest?: (index: number) => void;
+  refreshChest?: () => void;
 };
 
 export type CameraContext = Pick<
@@ -115,6 +116,11 @@ export type PlacedContext = Pick<GameContext, "world" | "room" | "$">;
 
 export type MobContext = Pick<GameContext, "app" | "world" | "room" | "$">;
 
+export type ChestContext = Pick<
+  GameContext,
+  "room" | "myInventory" | "openChest" | "refreshChest"
+>;
+
 export type RecipeArray = Recipe[];
 export type Recipes = Record<string, Recipe>;
 export type Items = Record<string, Item>;
@@ -124,10 +130,21 @@ type _GameContext = GameContext;
 type _CameraContext = CameraContext;
 type _PlacedContext = PlacedContext;
 type _MobContext = MobContext;
+type _ChestContext = ChestContext;
 
 export namespace Context {
   export type GameContext = _GameContext;
   export type CameraContext = _CameraContext;
   export type PlacedContext = _PlacedContext;
   export type MobContext = _MobContext;
+  export type ChestContext = _ChestContext;
+}
+
+export namespace ChestTypes {
+  export type ChestQuantity = 1 | 10 | "all";
+  export type ChestDirection = "deposit" | "withdraw";
+  export type ChestDataMessage = {
+    index: number;
+    items: Record<string, number>;
+  };
 }
