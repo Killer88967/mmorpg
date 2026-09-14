@@ -1,10 +1,14 @@
-// @ts-nocheck
 import { ITEM_DB } from "@/data/items";
+import type { Context, ContextMenuTypes } from "@/types";
 
 // slot right-click / long-press menu + its actions. Shared state via `ctx`.
-export function initContextMenu(ctx) {
+export function initContextMenu(ctx: Context.ContextMenuContext) {
   const room = ctx.room;
   const invGrid = ctx.invGrid;
+
+  if (!invGrid) {
+    throw new Error("Context menu initialized before inventory UI.");
+  }
 
   // ---- slot context menu (right-click / long-press) ----
   const ctxMenu = document.createElement("div");
@@ -12,16 +16,17 @@ export function initContextMenu(ctx) {
   document.body.appendChild(ctxMenu);
   ctx.longPressed = false;
 
-  const SLOT_ACTIONS = [
+  const SLOT_ACTIONS: ContextMenuTypes.SlotAction[] = [
     { id: "link", label: "🔗 Link in chat" },
     { id: "trade", label: "💰 Trade" },
     { id: "craft", label: "🔨 Craft" },
     { id: "discard", label: "🗑️ Discard", danger: true },
   ];
 
-  function openCtxMenu(item, x, y) {
+  function openCtxMenu(item: string, x: number, y: number) {
     ctxMenu.innerHTML = "";
     for (const a of SLOT_ACTIONS) {
+      if (!a.label || !a.danger || !a.disabled) return;
       const b = document.createElement("button");
       b.className =
         "ctx-item" +
@@ -47,20 +52,22 @@ export function initContextMenu(ctx) {
     ctxMenu.classList.remove("is-open");
   }
 
-  function doSlotAction(id, item) {
+  function doSlotAction(id: ContextMenuTypes.SlotActionId, item: string) {
     const def = ITEM_DB[item] || { name: item };
     const have = ctx.myInventory[item] ?? 0;
     if (id === "link") {
-      ctx.closeInv();
-      ctx.openChat();
-      ctx.chatInput.value += `{${item}} `;
-      ctx.chatInput.focus();
+      ctx.closeInv?.();
+      ctx.openChat?.();
+      if (ctx.chatInput) {
+        ctx.chatInput.value += `{${item}} `;
+        ctx.chatInput.focus();
+      }
     } else if (id === "trade") {
-      ctx.closeInv();
-      ctx.openTradeModal(item);
+      ctx.closeInv?.();
+      ctx.openTradeModal?.(item);
     } else if (id === "craft") {
-      ctx.closeInv();
-      ctx.openCrafting();
+      ctx.closeInv?.();
+      ctx.openCrafting?.();
     } else if (id === "discard") {
       if (have > 0 && confirm(`Discard all ${have} ${def.name}?`))
         room.send("discard", { item, count: have });
@@ -69,24 +76,30 @@ export function initContextMenu(ctx) {
 
   // right-click (desktop)
   invGrid.addEventListener("contextmenu", (e) => {
-    const slot = e.target.closest(".inv-slot");
+    const target = e.target instanceof Element ? e.target : null;
+    const slot = target?.closest<HTMLElement>(".inv-slot");
     if (!slot) return;
+    const item = slot.dataset.item;
+    if (!item) return;
     e.preventDefault();
-    openCtxMenu(slot.dataset.item, e.clientX, e.clientY);
+    openCtxMenu(item, e.clientX, e.clientY);
   });
 
   // long-press (touch / iPad)
-  let pressTimer = null;
+  let pressTimer: ReturnType<typeof setTimeout> | undefined;
   invGrid.addEventListener(
     "touchstart",
     (e) => {
-      const slot = e.target.closest(".inv-slot");
+      const target = e.target instanceof Element ? e.target : null;
+      const slot = target?.closest<HTMLElement>(".inv-slot");
       if (!slot) return;
+      const item = slot.dataset.item;
+      if (!item) return;
       ctx.longPressed = false;
       const t = e.touches[0];
       pressTimer = setTimeout(() => {
         ctx.longPressed = true;
-        openCtxMenu(slot.dataset.item, t.clientX, t.clientY);
+        openCtxMenu(item, t.clientX, t.clientY);
       }, 450);
     },
     { passive: true },
@@ -100,7 +113,8 @@ export function initContextMenu(ctx) {
       ctx.longPressed = false;
       return;
     }
-    if (!e.target.closest(".ctx-menu")) closeCtxMenu();
+    const target = e.target instanceof Element ? e.target : null;
+    if (!target?.closest(".ctx-menu")) closeCtxMenu();
   });
 
   // expose the bits other modules need

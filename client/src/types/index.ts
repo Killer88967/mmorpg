@@ -95,6 +95,7 @@ export type GameContext = {
   openChat?: () => void;
   closeChat?: () => void;
 
+  openCtxMenu?: (item: string, x: number, y: number) => void;
   closeCtxMenu?: () => void;
 
   craftModalIsOpen?: () => boolean;
@@ -116,6 +117,8 @@ export type GameContext = {
   hideTooltip?: () => void;
   fillTooltip?: (item: string) => void;
   showTooltip?: (chip: HTMLElement) => void;
+
+  openTradeModal?: (item?: string) => void;
 };
 
 export type CameraContext = Pick<
@@ -160,6 +163,22 @@ export type TooltipContext = Pick<
   | "hideTooltip"
 >;
 
+export type ContextMenuContext = Pick<
+  GameContext,
+  | "room"
+  | "invGrid"
+  | "myInventory"
+  | "longPressed"
+  | "closeInv"
+  | "openChat"
+  | "chatInput"
+  | "openTradeModal"
+  | "openCrafting"
+  | "ctxMenu"
+  | "openCtxMenu"
+  | "closeCtxMenu"
+>;
+
 export type RecipeArray = Recipe[];
 export type Recipes = Record<string, Recipe>;
 export type Items = Record<string, Item>;
@@ -172,6 +191,7 @@ type _MobContext = MobContext;
 type _ChestContext = ChestContext;
 type _InventoryContext = InventoryContext;
 type _TooltipContext = TooltipContext;
+type _ContextMenuContext = ContextMenuContext;
 
 export namespace Context {
   export type GameContext = _GameContext;
@@ -181,6 +201,7 @@ export namespace Context {
   export type ChestContext = _ChestContext;
   export type InventoryContext = _InventoryContext;
   export type TooltipContext = _TooltipContext;
+  export type ContextMenuContext = _ContextMenuContext;
 }
 
 export namespace ChestTypes {
@@ -189,5 +210,15 @@ export namespace ChestTypes {
   export type ChestDataMessage = {
     index: number;
     items: Record<string, number>;
+  };
+}
+
+export namespace ContextMenuTypes {
+  export type SlotActionId = "link" | "trade" | "craft" | "discard";
+  export type SlotAction = {
+    id: SlotActionId;
+    label?: string;
+    danger?: boolean;
+    disabled?: boolean;
   };
 }
