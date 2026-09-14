@@ -1,7 +1,7 @@
 import "./style.css";
 import { Callbacks } from "@colyseus/sdk";
 import { Application, Graphics, Container, Text } from "pixi.js";
-import type { GameContext, PlayerSprite } from "@/types";
+import type { Context, PlayerSprite } from "@/types";
 import { createRoom } from "@/net/room";
 import { createMap } from "@/world/map";
 import { startCamera } from "@/world/camera";
@@ -37,7 +37,7 @@ async function main() {
   const $ = Callbacks.get(room);
 
   // shared UI context — mutable state + cross-module handles live here
-  const ctx: GameContext = {
+  const ctx: Context.GameContext = {
     room,
     myName: name,
     myInventory: {},

@@ -1,6 +1,6 @@
-import type { GameContext } from "@/types";
+import type { Context } from "@/types";
 
-export function initHud(ctx: GameContext) {
+export function initHud(ctx: Context.GameContext) {
   const room = ctx.room;
 
   const wrap = document.createElement("div");

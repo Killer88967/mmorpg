@@ -1,12 +1,12 @@
-import type { GameContext } from "@/types";
+import type { Context } from "@/types";
 
 // keyboard: Enter opens chat, E harvests, WASD moves, I/B toggles inventory.
 // Shared state via `ctx`.
-export function initInput(ctx: GameContext) {
+export function initInput(ctx: Context.GameContext) {
   const room = ctx.room;
 
   // ---- input state ----
-  const keymap: Record<string, keyof GameContext["held"]> = {
+  const keymap: Record<string, keyof Context.GameContext["held"]> = {
     ArrowUp: "up",
     KeyW: "up",
     ArrowDown: "down",

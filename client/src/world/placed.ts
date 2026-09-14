@@ -1,9 +1,9 @@
 import { Graphics } from "pixi.js";
 import { PLACE_INFO } from "@/data/placeables";
-import type { PlacedContext } from "@/types";
+import type { Context } from "@/types";
 import type { Placed } from "@/server/schema/WorldState";
 
-export function initPlaced({ world, room, $ }: PlacedContext) {
+export function initPlaced({ world, room, $ }: Context.PlacedContext) {
   const gfx = new Map<number, Graphics>();
 
   function draw(index: number, kind: string) {

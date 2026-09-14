@@ -1,9 +1,9 @@
 import { ITEM_DB } from "@/data/items";
-import type { GameContext } from "@/types";
+import type { Context } from "@/types";
 import { formatAmount } from "@/util/format";
 
 // wires up chat + offer messages. Shares mutable state through `ctx`.
-export function initChat(ctx: GameContext) {
+export function initChat(ctx: Context.GameContext) {
   const room = ctx.room;
 
   const offerLines = new Map<string, HTMLElement>();
