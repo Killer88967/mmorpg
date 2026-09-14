@@ -17,6 +17,9 @@ jobs:
     name: Build & Typecheck
     runs-on: ubuntu-latest
 
+    env:
+      DATABASE_URL: "file:./data/dev.db"
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -35,7 +38,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Generate prisma
+      - name: Generate Prisma
         run: pnpm db:gen
 
       - name: Typecheck
