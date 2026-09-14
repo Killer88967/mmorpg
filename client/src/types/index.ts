@@ -111,7 +111,11 @@ export type GameContext = {
   openChest?: (index: number) => void;
   refreshChest?: () => void;
 
+  longPressed?: boolean;
+
   hideTooltip?: () => void;
+  fillTooltip?: (item: string) => void;
+  showTooltip?: (chip: HTMLElement) => void;
 };
 
 export type CameraContext = Pick<
@@ -145,6 +149,17 @@ export type InventoryContext = Pick<
   | "toggleInv"
 >;
 
+export type TooltipContext = Pick<
+  GameContext,
+  | "chatLog"
+  | "invGrid"
+  | "longPressed"
+  | "showLog"
+  | "fillTooltip"
+  | "showTooltip"
+  | "hideTooltip"
+>;
+
 export type RecipeArray = Recipe[];
 export type Recipes = Record<string, Recipe>;
 export type Items = Record<string, Item>;
@@ -156,6 +171,7 @@ type _PlacedContext = PlacedContext;
 type _MobContext = MobContext;
 type _ChestContext = ChestContext;
 type _InventoryContext = InventoryContext;
+type _TooltipContext = TooltipContext;
 
 export namespace Context {
   export type GameContext = _GameContext;
@@ -164,6 +180,7 @@ export namespace Context {
   export type MobContext = _MobContext;
   export type ChestContext = _ChestContext;
   export type InventoryContext = _InventoryContext;
+  export type TooltipContext = _TooltipContext;
 }
 
 export namespace ChestTypes {

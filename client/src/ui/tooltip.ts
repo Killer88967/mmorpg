@@ -1,8 +1,8 @@
-// @ts-nocheck
 import { ITEM_DB } from "@/data/items";
+import type { Context } from "@/types";
 
 // item tooltip (tap to pin, hover to peek) + slot inspect. Shared state via `ctx`.
-export function initTooltip(ctx) {
+export function initTooltip(ctx: Context.TooltipContext) {
   const chatLog = ctx.chatLog;
   const invGrid = ctx.invGrid;
 
@@ -10,14 +10,20 @@ export function initTooltip(ctx) {
   const tooltip = document.createElement("div");
   tooltip.className = "item-tooltip";
   document.body.appendChild(tooltip);
-  let pinnedChip = null;
+  let pinnedChip: HTMLElement | null = null;
+
+  if (!invGrid || !chatLog) {
+    throw new Error("Failed to find inventory components.");
+  }
 
   // click a slot to inspect it (reuses the item tooltip)
   invGrid.addEventListener("click", (e) => {
     if (ctx.longPressed) return;
-    const slot = e.target.closest(".inv-slot");
+    const slot = eventElement(e)?.closest<HTMLElement>(".inv-slot");
     if (!slot) return;
-    fillTooltip(slot.dataset.item);
+    const item = slot.dataset.item;
+    if (!item) return;
+    fillTooltip(item);
     tooltip.classList.add("is-visible");
     const r = slot.getBoundingClientRect();
     const tr = tooltip.getBoundingClientRect();
@@ -28,7 +34,12 @@ export function initTooltip(ctx) {
     tooltip.style.top = top + "px";
   });
 
-  function fillTooltip(item) {
+  // ---- helpers ----
+  function eventElement(event: Event): Element | null {
+    return event.target instanceof Element ? event.target : null;
+  }
+
+  function fillTooltip(item: string) {
     const def = ITEM_DB[item] || {
       name: item,
       icon: "📦",
@@ -55,8 +66,10 @@ export function initTooltip(ctx) {
     tooltip.innerHTML = html;
   }
 
-  function showTooltip(chip) {
-    fillTooltip(chip.dataset.item);
+  function showTooltip(chip: HTMLElement) {
+    const item = chip.dataset.item;
+    if (!item) return;
+    fillTooltip(item);
     tooltip.classList.add("is-visible");
     const r = chip.getBoundingClientRect();
     const tr = tooltip.getBoundingClientRect();
@@ -76,25 +89,26 @@ export function initTooltip(ctx) {
   }
 
   chatLog.addEventListener("mouseover", (e) => {
-    const chip = e.target.closest(".chat-item");
+    const chip = eventElement(e)?.closest<HTMLElement>(".chat-item");
     if (!chip || pinnedChip) return;
-    ctx.showLog();
+    ctx.showLog?.();
     showTooltip(chip);
   });
   chatLog.addEventListener("mouseout", (e) => {
     if (pinnedChip) return;
-    if (e.target.closest(".chat-item")) hideTooltip();
+    if (eventElement(e)?.closest<HTMLElement>(".chat-item")) hideTooltip();
   });
   chatLog.addEventListener("click", (e) => {
-    const chip = e.target.closest(".chat-item");
+    const chip = eventElement(e)?.closest<HTMLElement>(".chat-item");
     if (!chip) return;
     if (pinnedChip === chip) return hideTooltip();
     pinnedChip = chip;
-    ctx.showLog();
+    ctx.showLog?.();
     showTooltip(chip);
   });
   document.addEventListener("click", (e) => {
-    if (pinnedChip && !e.target.closest(".chat-item")) hideTooltip();
+    if (pinnedChip && !eventElement(e)?.closest<HTMLElement>(".chat-item"))
+      hideTooltip();
   });
 
   // expose the bits other modules need
