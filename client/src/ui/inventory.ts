@@ -57,7 +57,7 @@ export function initInventory(ctx: Context.InventoryContext) {
     invModal.querySelector<HTMLButtonElement>(".inv-modal-close");
 
   if (!invGrid || !closeButton) {
-    throw new Error("Failed to craete inventory UI.");
+    throw new Error("Failed to create inventory UI.");
   }
 
   function renderInvGrid() {
